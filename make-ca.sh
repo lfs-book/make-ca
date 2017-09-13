@@ -9,8 +9,9 @@
 #
 # Changes:
 #
-# 20161210 - Fix creation of PKI dir when NSS not installed
-#          - Add message about --force swich when no update required
+# 20170119 - Show trust bits on local certs
+#          - Add version output for help2man
+# 20161210 - Add note about --force swich when same version
 # 20161126 - Add -D/--destdir switch
 # 20161124 - Add -f/--force switch to bypass version check
 #          - Add multiple switches to allow for alternate localtions
@@ -19,6 +20,7 @@
 #          - Add support for Java and NSSDB
 
 # Set defaults
+VERSION="20170119"
 CERTDATA="certdata.txt"
 PKIDIR="/etc/pki"
 SSLDIR="/etc/ssl"
@@ -169,6 +171,10 @@ function get_args(){
         showhelp
         exit 0
       ;;
+      -v | --version)
+        echo -e "$(basename ${0}) ${VERSION}\n"
+        exit 0
+      ;;
       *)
         showhelp
         exit 1
@@ -236,6 +242,8 @@ function showhelp(){
   echo "        -f  --force      Force run, even if source is not newer"
   echo ""
   echo "        -h  --help       Show this help message and exit"
+  echo ""
+  echo "        -v  --version    Show version information and exit"
   echo ""
   echo "Example: `basename ${0}` -f -C ~/certdata.txt"
   echo ""
@@ -531,7 +539,7 @@ if test -d "${LOCALDIR}"; then
     "${OPENSSL}" x509 -in "${cert}" -text -fingerprint \
                       -setalias "${certname}"          \
                       >> "${DESTDIR}${CERTDIR}/${keyhash}.pem"
-    echo "Added to OpenSSL certificate directory."
+    echo "Added to OpenSSL certificate directory with trust '${satrust},${smtrust},${cstrust}'."
 
     # Add to Shared NSS DB
     if test "${WITH_NSS}" == "1"; then
