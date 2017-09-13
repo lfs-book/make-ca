@@ -1,0 +1,6 @@
+make-ca.sh is a script to deliver a complete PKI setup for linux workstaitons
+using only bash, coreutils, and openssl, and optionally for OpenJDK, NSS, and
+p11-kit if already installed, from the upstream Mozilla cacerts.txt. It was
+developed for use with Linux From Scratch to minimize dependencies for early
+system build, but has been written to be generic enough for any Linux
+distribution.
