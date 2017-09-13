@@ -282,7 +282,7 @@ function convert_trust_arg(){
           echo "-addtrust codeSigning"
         ;;
         ca)
-          echo "-addtust clientAuth"
+          echo "-addtrust clientAuth"
         ;;
       esac
     ;;
