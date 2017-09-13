@@ -9,6 +9,8 @@
 #
 # Changes:
 #
+# 20161210 - Fix creation of PKI dir when NSS not installed
+#          - Add message about --force swich when no update required
 # 20161126 - Add -D/--destdir switch
 # 20161124 - Add -f/--force switch to bypass version check
 #          - Add multiple switches to allow for alternate localtions
@@ -318,7 +320,7 @@ else
 fi
 
 if test "${OLDVERSION}x" == "${VERSION}x"; then
-  echo "No update required!"
+  echo "No update required! Use --force to update anyway."
   exit 0
 fi
 
@@ -553,7 +555,8 @@ fi
 # Populate a duplicate anchor directory
 test -d "${DESTDIR}${ANCHORDIR}" && mv "${DESTDIR}${ANCHORDIR}" \
                                        "${DESTDIR}${ANCHORDIR}.old"
-cp -R "${DESTDIR}${CERTDIR}" "${DESTDIR}${ANCHORDIR}"
+install -vdm755 "${DESTDIR}${ANCHORDIR}"
+cp "${DESTDIR}${CERTDIR}"/*.pem "${DESTDIR}${ANCHORDIR}"
 rm -rf "${DESTDIR}${ANCHORDIR}.old"
 
 /usr/bin/c_rehash "${DESTDIR}${CERTDIR}" 2>&1>/dev/null
