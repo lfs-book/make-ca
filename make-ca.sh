@@ -9,6 +9,10 @@
 #
 # Changes:
 #
+# 20170425 - Use p11-kit format anchors
+#          - Add CKA_NSS_MOZILLA_CA_POLICY attribute for p11-kit anchors
+#          - Add clientAuth OpenSSL attribute and (currently unused) NSS
+#            CKA_TRUST_CLIENT_AUTH
 # 20170119 - Show trust bits on local certs
 #          - Add version output for help2man
 # 20161210 - Add note about --force swich when same version
@@ -20,7 +24,7 @@
 #          - Add support for Java and NSSDB
 
 # Set defaults
-VERSION="20170119"
+VERSION="20170425"
 CERTDATA="certdata.txt"
 PKIDIR="/etc/pki"
 SSLDIR="/etc/ssl"
@@ -277,6 +281,9 @@ function convert_trust_arg(){
         cs)
           echo "-addtrust codeSigning"
         ;;
+        ca)
+          echo "-addtust clientAuth"
+        ;;
       esac
     ;;
     p)
@@ -290,6 +297,9 @@ function convert_trust_arg(){
         cs)
           echo "-addreject codeSigning"
         ;;
+        ca)
+          echo "-addreject clientAuth"
+        ;;
       esac
     ;;
     *)
@@ -298,6 +308,43 @@ function convert_trust_arg(){
   esac
 }
     
+# Define p11-kit ext value constants (see p11-kit API documentation)
+get-p11-val() {
+  case $1 in
+    p11sasmcs)
+      p11value="0%2a%06%03U%1d%25%01%01%ff%04 0%1e%06%08%2b%06%01%05%05%07%03%04%06%08%2b%06%01%05%05%07%03%01%06%08%2b%06%01%05%05%07%03%03"
+    ;;
+
+    p11sasm)
+      p11value="0 %06%03U%1d%25%01%01%ff%04%160%14%06%08%2b%06%01%05%05%07%03%04%06%08%2b%06%01%05%05%07%03%01"
+    ;;
+
+    p11sacs)
+      p11value="0 %06%03U%1d%25%01%01%ff%04%160%14%06%08%2b%06%01%05%05%07%03%01%06%08%2b%06%01%05%05%07%03%03"
+    ;;
+
+    p11sa)
+      p11value="0%16%06%03U%1d%25%01%01%ff%04%0c0%0a%06%08%2b%06%01%05%05%07%03%01"
+    ;;
+
+    p11smcs)
+      p11value="0 %06%03U%1d%25%01%01%ff%04%160%14%06%08%2b%06%01%05%05%07%03%04%06%08%2b%06%01%05%05%07%03%03"
+    ;;
+
+    p11sm)
+      p11value="0%16%06%03U%1d%25%01%01%ff%04%0c0%0a%06%08%2b%06%01%05%05%07%03%04"
+    ;;
+
+    p11cs)
+      p11value="0%16%06%03U%1d%25%01%01%ff%04%0c0%0a%06%08%2b%06%01%05%05%07%03%03"
+    ;;
+
+    p11)
+      p11value="0%18%06%03U%1d%25%01%01%ff%04%0e0%0c%06%0a%2b%06%01%04%01%99w%06%0a%10"
+    ;;
+  esac
+}
+
 # Process command line arguments
 get_args $@
 
@@ -332,7 +379,7 @@ if test "${OLDVERSION}x" == "${VERSION}x"; then
   exit 0
 fi
 
-mkdir -p "${TEMPDIR}"/{certs,ssl/{certs,java},pki/nssdb,work}
+mkdir -p "${TEMPDIR}"/{certs,ssl/{certs,java},pki/{nssdb,anchors},work}
 cp "${CERTDATA}" "${WORKDIR}/certdata.txt"
 pushd "${WORKDIR}" > /dev/null
 
@@ -364,16 +411,53 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
                   cut -d " " -f 3`)"
   cstrust="$(convert_trust `grep '^CKA_TRUST_CODE_SIGNING' ${tempfile} | \
                   cut -d " " -f 3`)"
+  # Not currently included in NSS certdata.txt
+  #catrust="$(convert_trust `grep '^CKA_TRUST_CLIENT_AUTH' ${tempfile} | \
+  #                cut -d " " -f 3`)"
 
   # Get args for OpenSSL trust settings
   saarg="$(convert_trust_arg "${satrust}" sa)"
   smarg="$(convert_trust_arg "${smtrust}" sm)"
   csarg="$(convert_trust_arg "${cstrust}" cs)"
+  # Not currently included in NSS certdata.txt
+  #caarg="$(convert_trust_arg "${catrust}" ca)"
 
   # Convert to a PEM formated certificate
   printf $(awk '/^CKA_VALUE/{flag=1;next}/^END/{flag=0}flag{printf $0}' \
   "${tempfile}") | "${OPENSSL}" x509 -text -inform DER -fingerprint \
   > tempfile.crt
+
+  # Get individual values for certificates
+  certkey="$(${OPENSSL} x509 -in tempfile.crt -noout -pubkey)"
+  certcer="$(${OPENSSL} x509 -in tempfile.crt)"
+  certtxt="$(${OPENSSL} x509 -in tempfile.crt -noout -text)"
+
+  # Get p11-kit label, oid, and values
+  p11label="$(grep -m1 "Issuer" ${tempfile} | grep -o CN=.*$ | \
+              cut -d ',' -f 1 | sed 's@CN=@@')"
+
+  # if distrusted at all, x-distrusted
+  if test "${satrust}" == "p" -o "${smtrust}" == "p" -o "${cstrust}" == "p"
+  then
+      # if any distrusted, x-distrusted
+      p11trust="x-distrusted: true"
+      p11oid="1.3.6.1.4.1.3319.6.10.1"
+      p11value="0.%06%0a%2b%06%01%04%01%99w%06%0a%01%04 0%1e%06%08%2b%06%01%05%05%07%03%04%06%08%2b%06%01%05%05%07%03%01%06%08%2b%06%01%05%05%07%03%03"
+  else
+      p11trust="trusted: true"
+      p11oid="2.5.29.37"
+      trustp11="p11"
+      if test "${satrust}" == "C"; then
+          trustp11="${trustp11}sa"
+      fi
+      if test "${smtrust}" == "C"; then
+          trustp11="${trustp11}sm"
+      fi
+      if test "${cstrust}" == "C"; then
+          trustp11="${trustp11}cs"
+      fi
+      get-p11-val "${trustp11}"
+  fi
 
   # Get a hash for the cert
   keyhash=$("${OPENSSL}" x509 -noout -in tempfile.crt -hash)
@@ -382,6 +466,26 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
   echo "Certificate:  ${certname}"
   echo "Keyhash:      ${keyhash}"
 
+  # Place certificate into trust anchors dir
+  anchorfile="${TEMPDIR}/pki/anchors/${keyhash}.pem"
+  echo "[p11-kit-object-v1]" >> "${anchorfile}"
+  echo "label: \"${p11label}\"" >> "${anchorfile}"
+  echo "class: x-certificate-extension" >> "${anchorfile}"
+  echo "object-id: ${p11oid}" >> "${anchorfile}"
+  echo "value: \"${p11value}\"" >> "${anchorfile}"
+  echo "modifiable: false" >> "${anchorfile}"
+  echo "${certkey}" >> "${anchorfile}"
+  echo "" >> "${anchorfile}"
+  echo "[p11-kit-object-v1]" >> "${anchorfile}"
+  echo "label: \"${p11label}\"" >> "${anchorfile}"
+  echo "${p11trust}" >> "${anchorfile}"
+  echo "nss-mozilla-ca-policy: true" >> "${anchorfile}"
+  echo "modifiable: false" >> "${anchorfile}"
+  echo "${certcer}" >> "${anchorfile}"
+  echo "${certtxt}" | sed 's@^@#@' >> "${anchorfile}"
+  echo "Added to p11-kit anchor directory with trust '${satrust},${smtrust},${cstrust}'."
+  
+  
   # Import certificates trusted for SSL/TLS into the Java keystore and 
   # GnuTLS certificate bundle
   if test "${satrust}x" == "Cx"; then
@@ -416,7 +520,9 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
 
   # Clean up the directory and environment as we go
   rm -f tempfile.crt
-  unset certname satrust smtrust cstrust
+  unset keyhash subject certname
+  unset satrust smtrust cstrust catrust sarg smarg csarg caarg
+  unset p11trust p11oid p11value trustp11 certkey certcer certtxt
   echo -e "\n"
 done
 unset tempfile
@@ -471,6 +577,13 @@ if test "${WITH_NSS}" == "1"; then
   rm -rf "${DESTDIR}${NSSDB}.old"
 fi
 
+# Install anchors in $ANCHORDIR
+test -d "${DESTDIR}${ANCHORDIR}" && mv "${DESTDIR}${ANCHORDIR}"\
+                                       "${DESTDIR}${ANCHORDIR}.old"
+install -dm755 "${DESTDIR}${ANCHORDIR}" 2>&1>/dev/null
+install -m644 "${TEMPDIR}"/pki/anchors/*.pem "${DESTDIR}${ANCHORDIR}" &&
+rm -rf "${DESTDIR}${ANCHORDIR}.old"
+
 # Install certificates in $CERTDIR
 test -d "${DESTDIR}${CERTDIR}" && mv "${DESTDIR}${CERTDIR}" \
                                      "${DESTDIR}${CERTDIR}.old"
@@ -502,12 +615,15 @@ if test -d "${LOCALDIR}"; then
     satrust=""
     smtrust=""
     cstrust=""
+    catrust=""
     satrust=$(echo "${trustlist}" | \
               grep "TLS Web Server" 2>&1> /dev/null && echo "C")
     smtrust=$(echo "${trustlist}" | \
               grep "E-mail Protection" 2>&1 >/dev/null && echo "C")
     cstrust=$(echo "${trustlist}" | \
               grep "Code Signing" 2>&1 >/dev/null && echo "C")
+    catrust=$(echo "${trustlist}" | \
+              grep "Client Auth" 2>&1 >/dev/null && echo "C")
 
     # Get reject information
     rejectlist=$("${OPENSSL}" x509 -in "${cert}" -text -trustout | \
@@ -518,6 +634,54 @@ if test -d "${LOCALDIR}"; then
               grep "E-mail Protection" 2>&1> /dev/null && echo "p"); fi
     if test "${cstrust}" == ""; then cstrust=$(echo "${rejectlist}" | \
               grep "Code Signing" 2>&1> /dev/null && echo "p"); fi
+    if test "${catrust}" == ""; then catrust=$(echo "${rejectlist}" | \
+              grep "Client Auth" 2>&1> /dev/null && echo "p"); fi
+
+
+    # Place certificate into trust anchors dir
+    p11label="$(grep -m1 "Issuer" ${cert} | grep -o CN=.*$ | \
+                cut -d ',' -f 1 | sed 's@CN=@@')"
+
+    # if distrusted at all, x-distrusted
+    if test "${satrust}" == "p" -o "${smtrust}" == "p" -o "${cstrust}" == "p"
+    then
+        # if any distrusted, x-distrusted
+        p11trust="x-distrusted: true"
+        p11oid="1.3.6.1.4.1.3319.6.10.1"
+        p11value="0.%06%0a%2b%06%01%04%01%99w%06%0a%01%04 0%1e%06%08%2b%06%01%05%05%07%03%04%06%08%2b%06%01%05%05%07%03%01%06%08%2b%06%01%05%05%07%03%03"
+    else
+        p11trust="trusted: true"
+        p11oid="2.5.29.37"
+        trustp11="p11"
+        if test "${satrust}" == "C"; then
+            trustp11="${trustp11}sa"
+        fi
+        if test "${smtrust}" == "C"; then
+            trustp11="${trustp11}sm"
+        fi
+        if test "${cstrust}" == "C"; then
+            trustp11="${trustp11}cs"
+        fi
+        get-p11-val "${trustp11}"
+    fi
+
+    anchorfile="${DESTDIR}${ANCHORDIR}/${keyhash}.pem"
+
+    echo "[p11-kit-object-v1]" >> "${anchorfile}"
+    echo "label: \"${p11label}\"" >> "${anchorfile}"
+    echo "class: x-certificate-extension" >> "${anchorfile}"
+    echo "object-id: ${p11oid}" >> "${anchorfile}"
+    echo "value: \"${p11value}\"" >> "${anchorfile}"
+    echo "modifiable: false" >> "${anchorfile}"
+    echo "${certkey}" >> "${anchorfile}"
+    echo "" >> "${anchorfile}"
+    echo "[p11-kit-object-v1]" >> "${anchorfile}"
+    echo "label: \"${p11label}\"" >> "${anchorfile}"
+    echo "${p11trust}" >> "${anchorfile}"
+    echo "modifiable: false" >> "${anchorfile}"
+    echo "${certcer}" >> "${anchorfile}"
+    echo "${certtxt}" | sed 's@^@#@' >> "${anchorfile}"
+    echo "Added to p11-kit anchor directory with trust '${satrust},${smtrust},${cstrust}'."
 
     # Install in Java keystore
     if test "${WITH_JAVA}" == "1" -a "${satrust}x" == "Cx"; then
@@ -539,7 +703,7 @@ if test -d "${LOCALDIR}"; then
     "${OPENSSL}" x509 -in "${cert}" -text -fingerprint \
                       -setalias "${certname}"          \
                       >> "${DESTDIR}${CERTDIR}/${keyhash}.pem"
-    echo "Added to OpenSSL certificate directory with trust '${satrust},${smtrust},${cstrust}'."
+    echo "Added to OpenSSL certificate directory with trust '${satrust},${smtrust},${cstrust},${catrust}'."
 
     # Add to Shared NSS DB
     if test "${WITH_NSS}" == "1"; then
@@ -551,21 +715,13 @@ if test -d "${LOCALDIR}"; then
     fi
 
     unset keyhash subject count certname
-    unset trustlist rejectlist satrust smtrust cstrust
+    unset trustlist rejectlist satrust smtrust cstrust catrust
+    unset p11trust p11oid p11value trustp11 certkey certcer certtxt
     echo ""
 
   done
   unset cert
 fi
-
-# We cannot use $CERTDIR directly as the trust anchor because of
-# c_rehash usage for OpenSSL (every entry is duplicated)
-# Populate a duplicate anchor directory
-test -d "${DESTDIR}${ANCHORDIR}" && mv "${DESTDIR}${ANCHORDIR}" \
-                                       "${DESTDIR}${ANCHORDIR}.old"
-install -vdm755 "${DESTDIR}${ANCHORDIR}"
-cp "${DESTDIR}${CERTDIR}"/*.pem "${DESTDIR}${ANCHORDIR}"
-rm -rf "${DESTDIR}${ANCHORDIR}.old"
 
 /usr/bin/c_rehash "${DESTDIR}${CERTDIR}" 2>&1>/dev/null
 popd > /dev/null
