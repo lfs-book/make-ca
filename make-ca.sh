@@ -1,16 +1,20 @@
-#!/bin/sh
+#!/bin/bash
 # Begin /usr/sbin/make-ca.sh
 #
 # Script to create OpenSSL certs directory, GnuTLS certificate bundle, NSS
 # shared DB, and Java cacerts from upstream certdata.txt and local sources
-#
-# The file certdata.txt must exist in the local directory
-# Version number is obtained from the version of the data
-#
+# 
 # Authors: DJ Lucas
 #          Bruce Dubbs
 #
-# Version 20161124
+# Changes:
+#
+# 20161126 - Add -D/--destdir switch
+# 20161124 - Add -f/--force switch to bypass version check
+#          - Add multiple switches to allow for alternate localtions
+#          - Add help text
+# 20161118 - Drop make-cert.pl script
+#          - Add support for Java and NSSDB
 
 # Set defaults
 CERTDATA="certdata.txt"
@@ -25,6 +29,7 @@ CERTDIR="${SSLDIR}/certs"
 KEYSTORE="${SSLDIR}/java/cacerts"
 NSSDB="${PKIDIR}/nssdb"
 LOCALDIR="${SSLDIR}/local"
+DESTDIR=""
 
 # Some data in the certs have UTF-8 characters
 export LANG=en_US.utf8
@@ -41,6 +46,11 @@ function get_args(){
       -C | --certdata)
         check_arg $1 $2
         CERTDATA="${2}"
+        shift 2
+      ;;
+      -D | --destdir)
+        check_arg $1 $2
+        DESTDIR="${2}"
         shift 2
       ;;
       -P | --pkidir)
@@ -181,6 +191,10 @@ function showhelp(){
   echo "        -C  --certdata   The certdata.txt file (provided by Mozilla)"
   echo "                         Default: ./certdata.txt"
   echo ""
+  echo "        -D  --destdir    Change the output directory and use relative"
+  echo "                         paths for all other values."
+  echo "                         Default: unset"
+  echo ""
   echo "        -P  --pkidir     The output PKI directory - Cannot be used with"
   echo "                         the -a/--anchordir or -n/--nssdb switches"
   echo "                         Default: /etc/pki"
@@ -209,7 +223,7 @@ function showhelp(){
   echo "                         Default: \$SSLDIR/local"
   echo ""
   echo "        -n  --nssdb      The output path for the shared NSS DB"
-  echo "                         Default: \$PKDIR/nssdb"
+  echo "                         Default: \$PKIDIR/nssdb"
   echo ""
   echo "        -k  --keytool    The path to the java keytool utility"
   echo ""
@@ -297,7 +311,7 @@ else
   if test "${FORCE}" == "1"; then
     echo "Output forced. Will run conversion unconditionally."
     sleep 2
-  else
+  elif test "${DESTDIR}x" == "x"; then
     test -f "${CABUNDLE}" &&
     OLDVERSION=$(grep "^VERSION:" "${CABUNDLE}" | cut -d ":" -f 2)
   fi
@@ -413,21 +427,23 @@ unset count
 # Generate the bundle
 bundlefile=`basename "${CABUNDLE}"`
 bundledir=`echo "${CABUNDLE}" | sed "s@/${bundlefile}@@"`
-install -vdm755 "${bundledir}"
-test -f "${CABUNDLE}" && mv "${CABUNDLE}" "${CABUNDLE}.old"
-echo "VERSION:${VERSION}" > "${CABUNDLE}"
-cat "${TEMPDIR}/ssl/ca-bundle.crt.tmp" >> "${CABUNDLE}" &&
-rm -f "${CABUNDLE}.old"
+install -vdm755 "${DESTDIR}${bundledir}" 2>&1>/dev/null
+test -f "${DESTDIR}${CABUNDLE}" && mv "${DESTDIR}${CABUNDLE}" \
+                                      "${DESTDIR}${CABUNDLE}.old"
+echo "VERSION:${VERSION}" > "${DESTDIR}${CABUNDLE}"
+cat "${TEMPDIR}/ssl/ca-bundle.crt.tmp" >> "${DESTDIR}${CABUNDLE}" &&
+rm -f "${DESTDIR}${CABUNDLE}.old"
 unset bundlefile bundledir
 
 # Install Java Cacerts
 if test "${WITH_JAVA}" == "1"; then
   javafile=`basename "${KEYSTORE}"`
   javadir=`echo "${KEYSTORE}" | sed "s@/${javafile}@@"`
-  install -vdm755 "${javadir}"
-  test -f "${KEYSTORE}" && mv "${KEYSTORE}" "${KEYSTORE}.old"
-  install -m644 "${TEMPDIR}/ssl/java/cacerts" "${KEYSTORE}" &&
-  rm -f "${KEYSTORE}.old"
+  install -vdm755 "${DESTDIR}${javadir}" 2>&1>/dev/null
+  test -f "${DESTDIR}${KEYSTORE}" && mv "${DESTDIR}${KEYSTORE}" \
+                                        "${DESTDIR}${KEYSTORE}.old"
+  install -m644 "${TEMPDIR}/ssl/java/cacerts" "${DESTDIR}${KEYSTORE}" &&
+  rm -f "${DESTDIR}${KEYSTORE}.old"
   unset javafile javadir
 fi
 
@@ -437,18 +453,20 @@ if test "${WITH_NSS}" == "1"; then
       -e 's/library=/library=libnsssysinit.so/'          \
       -e 's/Flags=internal/Flags=internal,moduleDBOnly/' \
       -i "${TEMPDIR}/pki/nssdb/pkcs11.txt" 
-  test -d "${NSSDB}" && mv "${NSSDB}" "${NSSDB}.old"
-  install -dm755 "${NSSDB}"
+  test -d "${DESTDIR}${NSSDB}" && mv "${DESTDIR}${NSSDB}" \
+                                     "${DESTDIR}${NSSDB}.old"
+  install -dm755 "${DESTDIR}${NSSDB}" 2>&1>/dev/null
   install -m644 "${TEMPDIR}"/pki/nssdb/{cert9.db,key4.db,pkcs11.txt} \
-                 "${NSSDB}" &&
-  rm -rf "${NSSDB}.old"
+                 "${DESTDIR}${NSSDB}" &&
+  rm -rf "${DESTDIR}${NSSDB}.old"
 fi
 
 # Install certificates in $CERTDIR
-test -d "${CERTDIR}" && mv "${CERTDIR}" "${CERTDIR}.old"
-install -dm755 "${CERTDIR}"
-install -m644 "${TEMPDIR}"/ssl/certs/*.pem "${CERTDIR}" &&
-rm -rf "${CERTDIR}.old"
+test -d "${DESTDIR}${CERTDIR}" && mv "${DESTDIR}${CERTDIR}" \
+                                     "${DESTDIR}${CERTDIR}.old"
+install -dm755 "${DESTDIR}${CERTDIR}" 2>&1>/dev/null
+install -m644 "${TEMPDIR}"/ssl/certs/*.pem "${DESTDIR}${CERTDIR}" &&
+rm -rf "${DESTDIR}${CERTDIR}.old"
 
 # Import any certs in $LOCALDIR
 # Don't do any checking, just trust the admin
@@ -494,7 +512,7 @@ if test -d "${LOCALDIR}"; then
     # Install in Java keystore
     if test "${WITH_JAVA}" == "1" -a "${satrust}x" == "Cx"; then
       "${KEYTOOL}" -import -noprompt -alias "${certname}"                  \
-                   -keystore "${KEYSTORE}"                                 \
+                   -keystore "${DESTDIR}${KEYSTORE}"                       \
                    -storepass 'changeit' -file "${cert}" 2>&1> /dev/null | \
       sed -e 's@Certificate was a@A@' -e 's@keystore@Java keystore.@'
     fi
@@ -503,20 +521,20 @@ if test -d "${LOCALDIR}"; then
     # openssl x509 to strip
     if test "${satrust}x" == "Cx"; then
       "${OPENSSL}" x509 -in "${cert}" -text -fingerprint \
-           >> "${CABUNDLE}"
+           >> "${DESTDIR}${CABUNDLE}"
       echo "Added to GnuTLS certificate bundle."
     fi
 
     # Install into OpenSSL certificate store
     "${OPENSSL}" x509 -in "${cert}" -text -fingerprint \
                       -setalias "${certname}"          \
-                      >> "${CERTDIR}/${keyhash}.pem"
+                      >> "${DESTDIR}${CERTDIR}/${keyhash}.pem"
     echo "Added to OpenSSL certificate directory."
 
     # Add to Shared NSS DB
     if test "${WITH_NSS}" == "1"; then
       "${OPENSSL}" x509 -in "${cert}" -text -fingerprint | \
-      "${CERTUTIL}" -d "sql:${NSSDB}" -A                   \
+      "${CERTUTIL}" -d "sql:${DESTDIR}${NSSDB}" -A                   \
                     -t "${satrust},${smtrust},${cstrust}"  \
                     -n "${certname}"
       echo "Added to NSS shared DB with trust '${satrust},${smtrust},${cstrust}'."
@@ -533,11 +551,12 @@ fi
 # We cannot use $CERTDIR directly as the trust anchor because of
 # c_rehash usage for OpenSSL (every entry is duplicated)
 # Populate a duplicate anchor directory
-test -d "${ANCHORDIR}" && mv "${ANCHORDIR}" "${ANCHORDIR}.old"
-cp -R "${CERTDIR}" "${ANCHORDIR}"
-rm -rf "${ANCHORDIR}.old"
+test -d "${DESTDIR}${ANCHORDIR}" && mv "${DESTDIR}${ANCHORDIR}" \
+                                       "${DESTDIR}${ANCHORDIR}.old"
+cp -R "${DESTDIR}${CERTDIR}" "${DESTDIR}${ANCHORDIR}"
+rm -rf "${DESTDIR}${ANCHORDIR}.old"
 
-/usr/bin/c_rehash "${CERTDIR}" 2>&1>/dev/null
+/usr/bin/c_rehash "${DESTDIR}${CERTDIR}" 2>&1>/dev/null
 popd > /dev/null
 
 # Clean up the mess
