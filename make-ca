@@ -1,5 +1,5 @@
 #!/bin/bash
-# Begin /usr/sbin/make-ca.sh
+# Begin /usr/sbin/make-ca
 #
 # Script to create p11-kit anchors, OpenSSL certs directory, GnuTLS certificate
 # bundle, NSS shared DB, and Java cacerts from upstream certdata.txt and local
@@ -8,7 +8,7 @@
 # Authors: DJ Lucas
 #          Bruce Dubbs
 
-VERSION="0.1b1"
+VERSION="0.1"
 
 # Get/set defaults
 if test -f /etc/make-ca.conf; then

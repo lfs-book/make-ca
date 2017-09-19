@@ -1,4 +1,4 @@
-0.1b1    - Check executable bit for CERTUTIL, KEYTOOL, and OPENSSL
+0.1      - Check executable bit for CERTUTIL, KEYTOOL, and OPENSSL
          - Allow global configuration file
          - Use correct license text (MIT)
 20170425 - Use p11-kit format anchors
