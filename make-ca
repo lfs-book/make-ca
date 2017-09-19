@@ -1,45 +1,37 @@
 #!/bin/bash
 # Begin /usr/sbin/make-ca.sh
 #
-# Script to create OpenSSL certs directory, GnuTLS certificate bundle, NSS
-# shared DB, and Java cacerts from upstream certdata.txt and local sources
+# Script to create p11-kit anchors, OpenSSL certs directory, GnuTLS certificate
+# bundle, NSS shared DB, and Java cacerts from upstream certdata.txt and local
+# sources
 # 
 # Authors: DJ Lucas
 #          Bruce Dubbs
-#
-# Changes:
-#
-# 20170425 - Use p11-kit format anchors
-#          - Add CKA_NSS_MOZILLA_CA_POLICY attribute for p11-kit anchors
-#          - Add clientAuth OpenSSL attribute and (currently unused) NSS
-#            CKA_TRUST_CLIENT_AUTH
-# 20170119 - Show trust bits on local certs
-#          - Add version output for help2man
-# 20161210 - Add note about --force swich when same version
-# 20161126 - Add -D/--destdir switch
-# 20161124 - Add -f/--force switch to bypass version check
-#          - Add multiple switches to allow for alternate localtions
-#          - Add help text
-# 20161118 - Drop make-cert.pl script
-#          - Add support for Java and NSSDB
 
-# Set defaults
-VERSION="20170425"
-CERTDATA="certdata.txt"
-PKIDIR="/etc/pki"
-SSLDIR="/etc/ssl"
-CERTUTIL="/usr/bin/certutil"
-KEYTOOL="/opt/jdk/bin/keytool"
-OPENSSL="/usr/bin/openssl"
-ANCHORDIR="${PKIDIR}/anchors"
-CABUNDLE="${SSLDIR}/ca-bundle.crt"
-CERTDIR="${SSLDIR}/certs"
-KEYSTORE="${SSLDIR}/java/cacerts"
-NSSDB="${PKIDIR}/nssdb"
-LOCALDIR="${SSLDIR}/local"
-DESTDIR=""
+VERSION="0.1b1"
+
+# Get/set defaults
+if test -f /etc/make-ca.conf; then
+    . /etc/make-ca.conf
+else
+    CERTDATA="certdata.txt"
+    PKIDIR="/etc/pki"
+    SSLDIR="/etc/ssl"
+    CERTUTIL="/usr/bin/certutil"
+    KEYTOOL="/opt/jdk/bin/keytool"
+    OPENSSL="/usr/bin/openssl"
+    ANCHORDIR="${PKIDIR}/anchors"
+    CABUNDLE="${SSLDIR}/ca-bundle.crt"
+    CERTDIR="${SSLDIR}/certs"
+    KEYSTORE="${SSLDIR}/java/cacerts"
+    NSSDB="${PKIDIR}/nssdb"
+    LOCALDIR="${SSLDIR}/local"
+    DESTDIR=""
+fi
+
 
 # Some data in the certs have UTF-8 characters
+# It doesn't really matter which locale, change if you like
 export LANG=en_US.utf8
 
 TEMPDIR=$(mktemp -d)
@@ -354,8 +346,10 @@ if test ! -r "${CERTDATA}"; then
   exit 1
 fi
 
-test -f "${CERTUTIL}" || WITH_NSS=0
-test -f "${KEYTOOL}" || WITH_JAVA=0
+test -x "${CERTUTIL}" || WITH_NSS=0
+test -x "${KEYTOOL}" || WITH_JAVA=0
+test ! -x "${OPENSSL}" && echo "OpenSSL not found at ${OPENSSL}. Exiting..." &&
+exit 1
 
 VERSION=$(grep CVS_ID "${CERTDATA}" | cut -d " " -f 8)
 
