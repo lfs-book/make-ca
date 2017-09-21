@@ -34,5 +34,5 @@ serverAuth trust. Additionally, to explicitly disallow a certificate for a
 particular use, replace the -addtrust flag with the -addreject flag.
 
 Local trust overrides are handled entirely using the /etc/ssl/local directory.
-To override Mozilla's trust values, simple make a copy of the certificate in
+To override Mozilla's trust values, simply make a copy of the certificate in
 the local directory with alternate trust values.
