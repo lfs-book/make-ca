@@ -27,7 +27,18 @@ else
     NSSDB="${PKIDIR}/nssdb"
     LOCALDIR="${SSLDIR}/local"
     DESTDIR=""
+    URL="https://hg.mozilla.org/releases/mozilla-release/raw-file/default/security/nss/lib/ckfw/builtins/certdata.txt"
 fi
+
+# Source must be downloaded over https
+# Valid urls for download are below
+# Defualt to NSS release brach
+
+# https://hg.mozilla.org/releases/mozilla-release/raw-file/default/security/nss/lib/ckfw/builtins/certdata.txt
+# https://hg.mozilla.org/projects/nss/raw-file/tip/lib/ckfw/builtins/certdata.txt
+# https://hg.mozilla.org/mozilla-central/raw-file/default/security/nss/lib/ckfw/builtins/certdata.txt
+# https://hg.mozilla.org/releases/mozilla-beta/raw-file/default/security/nss/lib/ckfw/builtins/certdata.txt
+# https://hg.mozilla.org/releases/mozilla-aurora/raw-file/default/security/nss/lib/ckfw/builtins/certdata.txt
 
 
 # Some data in the certs have UTF-8 characters
@@ -40,22 +51,23 @@ WITH_NSS=1
 WITH_JAVA=1
 CERTDATAY=0
 FORCE=0
+GET=0
 REBUILD=0
 
 function get_args(){
   while test -n "${1}" ; do
     case "${1}" in
       -C | --certdata)
-        if test "${REBUILD}" == "0"; then
+        if test "${REBUILD}" == "0" -a "${GET}" == "0"; then
           check_arg $1 $2
           CERTDATA="${2}"
           CERTDATAY="1"
           shift 2
         else
-          echo "Error: ${1} cannot be used with the -r/--rebuild switch."
+          echo "Error: ${1} cannot be used with the -r/--rebuild or -g/--get switches."
           exit 3
         fi
-        if test ! -f "${CERTDATA}"; then
+        if test ! -f "${CERTDATA}" -a "${GET}" == "0"; then
           echo "Error: ${CERTDATA} not found!"
           exit 3
         fi
@@ -130,6 +142,16 @@ function get_args(){
         fi
         shift 2
       ;;
+      -g | --get)
+        if test "${REBUILD}" == "0" -a "${CERTDATAY}" == "0"; then
+          GET=1
+          CERTDATA="${TEMPDIR}/certdatanew.txt"
+          shift 1
+        else
+          echo "Error: ${1} cannot be used with the -r/--rebuild or -C/--certdata switches."
+          exit 3
+        fi
+      ;;
       -j | --javacerts)
         check_arg $1 $2
         KEYSTORE="${2}"
@@ -162,11 +184,11 @@ function get_args(){
         shift 2
       ;;
       -r | --rebuild)
-        if test "${CERTDATAY}" == "0"; then
+        if test "${CERTDATAY}" == "0" -a "${GET}" == "0"; then
           REBUILD="1"
           shift 1
         else
-          echo "Error: ${1} cannot be used with the -C/--certdata switch."
+          echo "Error: ${1} cannot be used with the -C/--certdata or -g/--get switches."
           exit 3
         fi
         CERTDATA="${SSLDIR}/certdata.txt"
@@ -244,6 +266,9 @@ function showhelp(){
   echo "        -d  --cadir      The output directory for the OpenSSL trusted"
   echo "                         CA certificates"
   echo "                         Deault: \$SSLDIR/certs/"
+  echo ""
+  echo "        -g  --get        Download certdata.txt directly from Mozilla's"
+  echo "                         Mecurial server."
   echo ""
   echo "        -j  --javacerts  The output path for the Java cacerts file"
   echo "                         Default: \$SSLDIR/java/cacerts"
@@ -374,6 +399,22 @@ test -x "${KEYTOOL}" || WITH_JAVA=0
 test ! -x "${OPENSSL}" && echo "OpenSSL not found at ${OPENSSL}. Exiting..." &&
 exit 1
 
+mkdir -p "${TEMPDIR}"/{certs,ssl/{certs,java},pki/{nssdb,anchors},work}
+
+# Download certdata.txt if selected
+if test "${GET}" == "1"; then
+  HOST=$(echo "${URL}" | /usr/bin/cut -d / -f 3)
+  echo GET ${URL} | \
+  ${OPENSSL} s_client -ign_eof -connect ${HOST}:443 2>/dev/null > "${CERTDATA}"
+fi
+
+if test ! -r "${CERTDATA}"; then
+  echo "${CERTDATA} was not found. The certdata.txt file must be in the local"
+  echo "directory, speficied with the -C/--certdata switch, or downloaded with"
+  echo "the -g/--get switch."
+  exit 1
+fi
+
 VERSION=$(grep CVS_ID "${CERTDATA}" | cut -d " " -f 8)
 
 if test "${VERSION}x" == "x"; then
@@ -396,7 +437,6 @@ if test "${OLDVERSION}x" == "${VERSION}x"; then
   exit 0
 fi
 
-mkdir -p "${TEMPDIR}"/{certs,ssl/{certs,java},pki/{nssdb,anchors},work}
 cp "${CERTDATA}" "${WORKDIR}/certdata.txt"
 pushd "${WORKDIR}" > /dev/null
 
@@ -547,7 +587,7 @@ unset tempfile
 # Sanity check
 count=$(ls "${TEMPDIR}"/ssl/certs/*.pem | wc -l)
 # Historically there have been between 152 and 190 certs
-# A minimum of 140 should be safe for a rudimentry sanity check
+# A minimum of 150 should be safe for a rudimentry sanity check
 if test "${count}" -lt "150" ; then
     echo "Error! Only ${count} certificates were generated!"
     echo "Exiting without update!"
@@ -556,11 +596,6 @@ if test "${count}" -lt "150" ; then
     exit 2
 fi
 unset count
-
-# Install certdata.txt
-if test "${REBUILD}" == "0"; then
-  install -vm644 "${CERTDATA}" "${DESTDIR}${SSLDIR}"
-fi
 
 # Generate the bundle
 bundlefile=`basename "${CABUNDLE}"`
@@ -747,6 +782,11 @@ fi
 
 /usr/bin/c_rehash "${DESTDIR}${CERTDIR}" 2>&1>/dev/null
 popd > /dev/null
+
+# Install certdata.txt
+if test "${REBUILD}" == "0"; then
+  install -m644 "${CERTDATA}" "${DESTDIR}${SSLDIR}/certdata.txt"
+fi
 
 # Clean up the mess
 rm -rf "${TEMPDIR}"
