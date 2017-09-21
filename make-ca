@@ -144,7 +144,7 @@ function get_args(){
       ;;
       -g | --get)
         if test "${REBUILD}" == "0" -a "${CERTDATAY}" == "0"; then
-          GET=1
+          GET="1"
           CERTDATA="${TEMPDIR}/certdatanew.txt"
           shift 1
         else
@@ -186,6 +186,7 @@ function get_args(){
       -r | --rebuild)
         if test "${CERTDATAY}" == "0" -a "${GET}" == "0"; then
           REBUILD="1"
+          FORCE="1"
           shift 1
         else
           echo "Error: ${1} cannot be used with the -C/--certdata or -g/--get switches."
@@ -422,6 +423,8 @@ if test "${VERSION}x" == "x"; then
   echo "Will run conversion unconditionally."
   sleep 2
   VERSION="$(date -u +%Y%m%d-%H%M)"
+  echo "#CVS_ID @# \$ RCSfile: certdata.txt \$ \$Revision: ${VERSION} \$ \$Date: \$" > "${WORKDIR}/certdata.txt"
+
 else
   if test "${FORCE}" == "1"; then
     echo "Output forced. Will run conversion unconditionally."
@@ -437,7 +440,7 @@ if test "${OLDVERSION}x" == "${VERSION}x"; then
   exit 0
 fi
 
-cp "${CERTDATA}" "${WORKDIR}/certdata.txt"
+cat "${CERTDATA}" >> "${WORKDIR}/certdata.txt"
 pushd "${WORKDIR}" > /dev/null
 
 if test "${WITH_NSS}" == "1"; then
@@ -785,7 +788,7 @@ popd > /dev/null
 
 # Install certdata.txt
 if test "${REBUILD}" == "0"; then
-  install -m644 "${CERTDATA}" "${DESTDIR}${SSLDIR}/certdata.txt"
+  install -m644 "${WORKDIR}/certdata.txt" "${DESTDIR}${SSLDIR}/certdata.txt"
 fi
 
 # Clean up the mess
