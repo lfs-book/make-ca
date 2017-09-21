@@ -38,15 +38,27 @@ TEMPDIR=$(mktemp -d)
 WORKDIR="${TEMPDIR}/work"
 WITH_NSS=1
 WITH_JAVA=1
+CERTDATAY=0
 FORCE=0
+REBUILD=0
 
 function get_args(){
   while test -n "${1}" ; do
     case "${1}" in
       -C | --certdata)
-        check_arg $1 $2
-        CERTDATA="${2}"
-        shift 2
+        if test "${REBUILD}" == "0"; then
+          check_arg $1 $2
+          CERTDATA="${2}"
+          CERTDATAY="1"
+          shift 2
+        else
+          echo "Error: ${1} cannot be used with the -r/--rebuild switch."
+          exit 3
+        fi
+        if test ! -f "${CERTDATA}"; then
+          echo "Error: ${CERTDATA} not found!"
+          exit 3
+        fi
       ;;
       -D | --destdir)
         check_arg $1 $2
@@ -149,6 +161,20 @@ function get_args(){
         KEYTOOL="${2}"
         shift 2
       ;;
+      -r | --rebuild)
+        if test "${CERTDATAY}" == "0"; then
+          REBUILD="1"
+          shift 1
+        else
+          echo "Error: ${1} cannot be used with the -C/--certdata switch."
+          exit 3
+        fi
+        CERTDATA="${SSLDIR}/certdata.txt"
+        if test ! -f "${CERTDATA}"; then
+          echo "Error: ${CERTDATA} not found!"
+          exit 3
+        fi
+      ;;
       -s | --openssl)
         check_arg $1 $2
         OPENSSL="${2}"
@@ -230,6 +256,9 @@ function showhelp(){
   echo "                         Default: \$PKIDIR/nssdb"
   echo ""
   echo "        -k  --keytool    The path to the java keytool utility"
+  echo ""
+  echo "        -r  --rebuild    Rebuild the enitre PKI tree using the previous"
+  echo "                         certdata.txt file."
   echo ""
   echo "        -s  --openssl    The path to the openssl utility"
   echo ""
@@ -339,12 +368,6 @@ get-p11-val() {
 
 # Process command line arguments
 get_args $@
-
-if test ! -r "${CERTDATA}"; then
-  echo "${CERTDATA} was not found. The certdata.txt file must be in the local"
-  echo "directory, or speficied with the --certdata switch."
-  exit 1
-fi
 
 test -x "${CERTUTIL}" || WITH_NSS=0
 test -x "${KEYTOOL}" || WITH_JAVA=0
@@ -523,9 +546,9 @@ unset tempfile
 
 # Sanity check
 count=$(ls "${TEMPDIR}"/ssl/certs/*.pem | wc -l)
-# Historically there have been between 152 and 165 certs
+# Historically there have been between 152 and 190 certs
 # A minimum of 140 should be safe for a rudimentry sanity check
-if test "${count}" -lt "140" ; then
+if test "${count}" -lt "150" ; then
     echo "Error! Only ${count} certificates were generated!"
     echo "Exiting without update!"
     echo ""
@@ -533,6 +556,11 @@ if test "${count}" -lt "140" ; then
     exit 2
 fi
 unset count
+
+# Install certdata.txt
+if test "${REBUILD}" == "0"; then
+  install -vm644 "${CERTDATA}" "${DESTDIR}${SSLDIR}"
+fi
 
 # Generate the bundle
 bundlefile=`basename "${CABUNDLE}"`
