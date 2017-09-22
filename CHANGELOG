@@ -2,6 +2,7 @@
          - Provide -r/--rebuild option
          - Add -g/--get option to download using only s_client
          - Always add REVISION value to installed certdata.txt
+         - Use HG revision value (fall back to date for local files)
 0.1      - Check executable bit for CERTUTIL, KEYTOOL, and OPENSSL
          - Allow global configuration file
          - Use correct license text (MIT)

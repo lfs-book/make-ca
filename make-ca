@@ -405,8 +405,16 @@ mkdir -p "${TEMPDIR}"/{certs,ssl/{certs,java},pki/{nssdb,anchors},work}
 # Download certdata.txt if selected
 if test "${GET}" == "1"; then
   HOST=$(echo "${URL}" | /usr/bin/cut -d / -f 3)
+  _url=$(echo "${URL}" | sed 's@raw-file@log@')
+  echo GET ${_url} | \
+  ${OPENSSL} s_client -ign_eof -connect ${HOST}:443 2>/dev/null > "${TEMPDIR}/certdata.txt.log"
+  unset _url
+  REVISION=$(grep -m1 "<i>" "${TEMPDIR}/certdata.txt.log" | cut -d "<" -f 1)
   echo GET ${URL} | \
-  ${OPENSSL} s_client -ign_eof -connect ${HOST}:443 2>/dev/null > "${CERTDATA}"
+  ${OPENSSL} s_client -ign_eof -connect ${HOST}:443 2>/dev/null >> "${CERTDATA}"
+  _line=$(( $(grep -n "certdata.txt" "${CERTDATA}" | cut -d ":" -f 1) - 1))
+  sed -e "1,${_line}d" -i "${CERTDATA}"
+  sed "1i # Revision:${REVISION}" -i "${CERTDATA}"
 fi
 
 if test ! -r "${CERTDATA}"; then
@@ -416,14 +424,14 @@ if test ! -r "${CERTDATA}"; then
   exit 1
 fi
 
-VERSION=$(grep CVS_ID "${CERTDATA}" | cut -d " " -f 8)
+REVISION=$(grep "^# Revision" "${CERTDATA}" | cut -d ":" -f 2)
 
-if test "${VERSION}x" == "x"; then
-  echo "WARNING! ${CERTDATA} has no 'Revision' in CVS_ID"
+if test "${REVISION}x" == "x"; then
+  echo "WARNING! ${CERTDATA} has no 'Revision' value."
   echo "Will run conversion unconditionally."
   sleep 2
-  VERSION="$(date -u +%Y%m%d-%H%M)"
-  echo "#CVS_ID @# \$ RCSfile: certdata.txt \$ \$Revision: ${VERSION} \$ \$Date: \$" > "${WORKDIR}/certdata.txt"
+  REVISION="$(date -u +%Y%m%d-%H%M)"
+  echo "# Revision:${REVISION}" > "${WORKDIR}/certdata.txt"
 
 else
   if test "${FORCE}" == "1"; then
@@ -431,11 +439,11 @@ else
     sleep 2
   elif test "${DESTDIR}x" == "x"; then
     test -f "${CABUNDLE}" &&
-    OLDVERSION=$(grep "^VERSION:" "${CABUNDLE}" | cut -d ":" -f 2)
+    OLDVERSION=$(grep "^# Revision:" "${CABUNDLE}" | cut -d ":" -f 2)
   fi
 fi
 
-if test "${OLDVERSION}x" == "${VERSION}x"; then
+if test "${OLDVERSION}x" == "${REVISION}x"; then
   echo "No update required! Use --force to update anyway."
   exit 0
 fi
@@ -606,7 +614,7 @@ bundledir=`echo "${CABUNDLE}" | sed "s@/${bundlefile}@@"`
 install -vdm755 "${DESTDIR}${bundledir}" 2>&1>/dev/null
 test -f "${DESTDIR}${CABUNDLE}" && mv "${DESTDIR}${CABUNDLE}" \
                                       "${DESTDIR}${CABUNDLE}.old"
-echo "VERSION:${VERSION}" > "${DESTDIR}${CABUNDLE}"
+echo "# Revision:${REVISION}" > "${DESTDIR}${CABUNDLE}"
 cat "${TEMPDIR}/ssl/ca-bundle.crt.tmp" >> "${DESTDIR}${CABUNDLE}" &&
 rm -f "${DESTDIR}${CABUNDLE}.old"
 unset bundlefile bundledir
