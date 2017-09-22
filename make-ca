@@ -192,11 +192,6 @@ function get_args(){
           echo "Error: ${1} cannot be used with the -C/--certdata or -g/--get switches."
           exit 3
         fi
-        CERTDATA="${SSLDIR}/certdata.txt"
-        if test ! -f "${CERTDATA}"; then
-          echo "Error: ${CERTDATA} not found!"
-          exit 3
-        fi
       ;;
       -s | --openssl)
         check_arg $1 $2
@@ -415,6 +410,10 @@ if test "${GET}" == "1"; then
   _line=$(( $(grep -n "certdata.txt" "${CERTDATA}" | cut -d ":" -f 1) - 1))
   sed -e "1,${_line}d" -i "${CERTDATA}"
   sed "1i # Revision:${REVISION}" -i "${CERTDATA}"
+fi
+
+if test "${REBUILD}" == "1"; then
+  CERTDATA="${DESTDIR}${SSLDIR}/certdata.txt"
 fi
 
 if test ! -r "${CERTDATA}"; then
