@@ -4,6 +4,7 @@
          - Always add REVISION value to installed certdata.txt
          - Use HG revision value (fall back to date for local files)
          - Allow rebuid within DESTDIR
+         - Complete manpage
 0.1      - Check executable bit for CERTUTIL, KEYTOOL, and OPENSSL
          - Allow global configuration file
          - Use correct license text (MIT)

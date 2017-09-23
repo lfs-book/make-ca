@@ -1,0 +1,38 @@
+[SYNOPSYS]
+make-ca -g
+
+[EXAMPLES]
+The make-ca script will process the certificates included in the certdata.txt
+file for use in multiple certificate stores (if the associated applications are
+present on the system). Additionally, any local certificates stored in
+/etc/ssl/local will be imported to the certificate stores. Certificates in this
+directory should be stored as PEM encoded OpenSSL trusted certificates.
+
+To create an OpenSSL trusted certificate from a regular PEM encoded file,
+provided by a CA not included in Mozilla's certificate distribution, you need
+to add trust arguments to the openssl command, and create a new certificate.
+There are three trust types that are recognized by the make-ca.sh script,
+SSL/TLS, S/Mime, and code signing. For example, using the CAcert root, if you
+want it to be trusted for all three roles, the following commands will create
+an appropriate OpenSSL trusted certificate:
+
+  #\ install -vdm755 /etc/ssl/local \                                 
+  #\ wget http://www.cacert.org/certs/root.crt \                      
+  #\ openssl x509 -in root.crt -text -fingerprint \\ \                
+                 -setalias "CAcert Class 1 root" \\ \                 
+                 -addtrust serverAuth \\ \                            
+                 -addtrust emailProtection \\ \                       
+                 -addtrust codeSigning \\ \                           
+            > /etc/ssl/local/CAcert_Class_1_root.pem
+
+If one of the three trust arguments is omitted, the certificate is neither
+trusted, nor rejected for that role. Clients that use OpenSSL or NSS
+encountering this certificate will present a warning to the user. Clients using
+GnuTLS without p11-kit support are not aware of trusted certificates. To
+include this CA into the ca-bundle.crt (used for GnuTLS), it must have
+serverAuth trust. Additionally, to explicitly disallow a certificate for a
+particular use, replace the -addtrust flag with the -addreject flag.
+
+Local trust overrides are handled entirely using the /etc/ssl/local directory.
+To override Mozilla's trust values, simply make a copy of the certificate in
+the local directory with alternate trust values.
