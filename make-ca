@@ -810,4 +810,4 @@ fi
 # Clean up the mess
 rm -rf "${TEMPDIR}"
 
-# End /usr/sbin/make-ca.sh
+# End /usr/sbin/make-ca
