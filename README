@@ -1,9 +1,9 @@
-make-ca is a script to deliver a complete PKI setup for linux workstaitons
-and servers using only bash, coreutils, and openssl. It will optionally
-generate keystores for OpenJDK and NSS if already installed, using the upstream
-Mozilla cacerts.txt or like formatted file. It was originally developed for use
-with Linux From Scratch to minimize dependencies for early system build, but
-has been written to be generic enough for any Linux distribution.
+make-ca is a utility to deliver and manage a complete PKI configuration for
+workstaitons and servers using only standard Unix utilities and OpenSSL. It
+will optionally generate keystores for OpenJDK and NSS if already installed,
+using a Mozilla cacerts.txt or like formatted file. It was originally developed
+for use with Linux From Scratch to minimize dependencies for early system
+build, but has been written to be generic enough for any Linux distribution.
 
 The make-ca script will process the certificates included in the certdata.txt
 file for use in multiple certificate stores (if the associated applications are
