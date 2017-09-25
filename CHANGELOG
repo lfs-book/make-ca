@@ -1,3 +1,4 @@
+0.4      -
 0.3      - Generate single file stores (Java and GNUTLS) using main OpenSSL
            store as source to avoid duplicates
 0.2      - Install source certdata.txt file
