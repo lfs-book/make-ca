@@ -561,24 +561,6 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
   echo "${certtxt}" | sed 's@^@#@' >> "${anchorfile}"
   echo "Added to p11-kit anchor directory with trust '${satrust},${smtrust},${cstrust}'."
   
-  
-#  # Import certificates trusted for SSL/TLS into the Java keystore and 
-#  # GnuTLS certificate bundle
-#  if test "${satrust}x" == "Cx"; then
-#    # Java keystore
-#    if test "${WITH_JAVA}" == "1"; then
-#      "${KEYTOOL}" -import -noprompt -alias "${certname}"   \
-#                   -keystore "${TEMPDIR}/ssl/java/cacerts"  \
-#                   -storepass 'changeit' -file tempfile.crt \
-#      2>&1> /dev/null | \
-#      sed -e 's@Certificate was a@A@' -e 's@keystore@Java keystore.@'
-#    fi
-#
-#    # GnuTLS certificate bundle
-#    cat tempfile.crt >> "${TEMPDIR}/ssl/ca-bundle.crt.tmp"
-#    echo "Added to GnuTLS ceritificate bundle."
-#  fi
-
   # Import certificate into the temporary certificate directory with
   # trust arguments
   "${OPENSSL}" x509 -in tempfile.crt -text -fingerprint \
@@ -791,28 +773,8 @@ for cert in `find "${DESTDIR}${CERTDIR}" -name "*.pem"`; do
   trustlist=$("${OPENSSL}" x509 -in "${cert}" -text -trustout | \
                      grep -A1 "Trusted Uses")
   satrust=""
-  smtrust=""
-  cstrust=""
-  catrust=""
   satrust=$(echo "${trustlist}" | \
             grep "TLS Web Server" 2>&1> /dev/null && echo "C")
-  smtrust=$(echo "${trustlist}" | \
-            grep "E-mail Protection" 2>&1 >/dev/null && echo "C")
-  cstrust=$(echo "${trustlist}" | \
-            grep "Code Signing" 2>&1 >/dev/null && echo "C")
-  catrust=$(echo "${trustlist}" | \
-            grep "Client Auth" 2>&1 >/dev/null && echo "C")
-  # Get reject information
-  rejectlist=$("${OPENSSL}" x509 -in "${cert}" -text -trustout | \
-                   grep -A1 "Rejected Uses")
-  if test "${satrust}" == ""; then satrust=$(echo "${rejectlist}" | \
-            grep "TLS Web Server" 2>&1> /dev/null && echo "p"); fi
-  if test "${smtrust}" == ""; then smtrust=$(echo "${rejectlist}" | \
-            grep "E-mail Protection" 2>&1> /dev/null && echo "p"); fi
-  if test "${cstrust}" == ""; then cstrust=$(echo "${rejectlist}" | \
-            grep "Code Signing" 2>&1> /dev/null && echo "p"); fi
-  if test "${catrust}" == ""; then catrust=$(echo "${rejectlist}" | \
-            grep "Client Auth" 2>&1> /dev/null && echo "p"); fi
 
   if test "${satrust}x" == "Cx"; then
     echo ""
@@ -827,11 +789,6 @@ for cert in `find "${DESTDIR}${CERTDIR}" -name "*.pem"`; do
 
     # Install Java keystore
     if test "${WITH_JAVA}" == "1"; then
-#      echo "Debug, we have java..."
-#      echo "KEYTOOL is ${KEYTOOL}"
-#      echo "certname is ${certname}"
-#      echo "DESTDIR/KEYSTORE is ${DESTDIR}${KEYSTORE}"
-#      echo "file is ${TEMPDIR}/ssl/certs/${keyhash}.pem"
       "${KEYTOOL}" -import -noprompt -alias "${certname}"      \
                    -keystore "${DESTDIR}${KEYSTORE}"           \
                    -storepass 'changeit'                       \
