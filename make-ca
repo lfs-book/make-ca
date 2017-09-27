@@ -8,7 +8,7 @@
 # Authors: DJ Lucas
 #          Bruce Dubbs
 
-VERSION="0.3"
+VERSION="0.4"
 
 # Get/set defaults
 if test -f /etc/make-ca.conf; then
