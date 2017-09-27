@@ -1,0 +1,14 @@
+Mozilla no longer provides any trust information for code signing, opting only
+to supply VERIFY trust, so that Mozilla neither provides policy, nor removes
+the functionality from NSS. There is no trusted source of authority for code
+signing (such as we use Mozilla for TLS/S-Mime). The following list of
+certificate hashes that are already installed (as they have TLS trust from
+Mozilla) that are also trusted by Microsoft for code signing. The Microsoft
+Trusted Root Certificate Program's inclusion policy is available for review at
+https://technet.microsoft.com/en-us/library/mt171474.aspx.
+
+02265526,062cdee6,157753a5,244b5494,2c543cd1,2e4eed3c,3513523f,4304c5e5,
+442adcac,480720ec,48bec511,4a6481c9,4bfab552,5ad8a5d6,653b494a,6b99d060,
+7d0b38bd,ae8153b9,aee5f10d,b1159c4c,b204d74a,b7a5b843,ba89ed3b,c01cdfa2,
+c0ff1f52,cbf06781,d7e8dc79,e2799e36,f081611a,f3377b1b,f387163d,f39fc864
+

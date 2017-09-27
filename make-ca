@@ -22,6 +22,8 @@ else
     OPENSSL="/usr/bin/openssl"
     ANCHORDIR="${PKIDIR}/anchors"
     CABUNDLE="${SSLDIR}/ca-bundle.crt"
+    SMBUNDLE="${SSLDIR}/email-ca-bundle.crt"
+    CSBUNDLE="${SSLDIR}/objsign-ca-bundle.crt"
     CERTDIR="${SSLDIR}/certs"
     KEYSTORE="${SSLDIR}/java/cacerts"
     NSSDB="${PKIDIR}/nssdb"
@@ -773,15 +775,21 @@ for cert in `find "${DESTDIR}${CERTDIR}" -name "*.pem"`; do
   trustlist=$("${OPENSSL}" x509 -in "${cert}" -text -trustout | \
                      grep -A1 "Trusted Uses")
   satrust=""
+  smtrust=""
+  cstrust=""
   satrust=$(echo "${trustlist}" | \
             grep "TLS Web Server" 2>&1> /dev/null && echo "C")
+  smtrust=$(echo "${trustlist}" | \
+            grep "E-mail Protection" 2>&1 >/dev/null && echo "C")
+  cstrust=$(echo "${trustlist}" | \
+            grep "Code Signing" 2>&1 >/dev/null && echo "C")
 
   if test "${satrust}x" == "Cx"; then
     echo ""
     echo "${certname}" | sed 's@Alias:@Certificate: @'
     echo "Keyhash:      ${keyhash}"
 
-    # Append to the bundle
+    # Append to the CA bundle
     "${OPENSSL}" x509 -in "${cert}" -text -fingerprint \
          > "${TEMPDIR}/ssl/certs/${keyhash}.pem"
     cat "${TEMPDIR}/ssl/certs/${keyhash}.pem" >> "${DESTDIR}${CABUNDLE}"
@@ -796,6 +804,28 @@ for cert in `find "${DESTDIR}${CERTDIR}" -name "*.pem"`; do
                    2>&1> /dev/null | \
       sed -e 's@Certificate was a@A@' -e 's@keystore@Java keystore.@'
     fi
+  fi
+  if test "${smtrust}x" == "Cx"; then
+    echo ""
+    echo "${certname}" | sed 's@Alias:@Certificate: @'
+    echo "Keyhash:      ${keyhash}"
+
+    # Append to the s-mime bundle
+    "${OPENSSL}" x509 -in "${cert}" -text -fingerprint \
+         > "${TEMPDIR}/ssl/certs/${keyhash}.pem"
+    cat "${TEMPDIR}/ssl/certs/${keyhash}.pem" >> "${DESTDIR}${SMBUNDLE}"
+    echo "Added to s-mime certificate bundle."
+  fi
+  if test "${cstrust}x" == "Cx"; then
+    echo ""
+    echo "${certname}" | sed 's@Alias:@Certificate: @'
+    echo "Keyhash:      ${keyhash}"
+
+    # Append to the code signing bundle
+    "${OPENSSL}" x509 -in "${cert}" -text -fingerprint \
+         > "${TEMPDIR}/ssl/certs/${keyhash}.pem"
+    cat "${TEMPDIR}/ssl/certs/${keyhash}.pem" >> "${DESTDIR}${CSBUNDLE}"
+    echo "Added to code signing certificate bundle."
   fi
 done
 
