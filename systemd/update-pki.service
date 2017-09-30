@@ -1,0 +1,12 @@
+[Unit]
+Description=Update PKI/TLS certificate store
+Documentation=man:make-ca(8)
+DefaultDependencies=no
+After=local-fs.target
+Before=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/make-ca -g
+
