@@ -1,4 +1,5 @@
-0.5      - Add example systemd timer and service units
+0.5      - Install systemd timer and service units
+         - Add uninstall and clean targets
 0.4      - Add email and code signing flat file certificate stores
 0.3      - Generate single file stores (Java and GNUTLS) using main OpenSSL
            store as source to avoid duplicates
