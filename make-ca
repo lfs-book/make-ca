@@ -180,6 +180,11 @@ function get_args(){
         fi
         shift 2
       ;;
+      -p | --proxy)
+        check_arg $1 $2
+        PROXY="${2}"
+        shift 2
+      ;;
       -k | --keytool)
         check_arg $1 $2
         KEYTOOL="${2}"
@@ -280,6 +285,9 @@ function showhelp(){
   echo ""
   echo "        -n, --nssdb [\$PKIDIR/nssdb]"
   echo "                         The output path for the shared NSS DB"
+  echo ""
+  echo "        -p, --proxy [URI:PORT]"
+  echo "                         Use proxy server for download"
   echo ""
   echo "        -k, --keytool [PATH]"
   echo "                         The path to the java keytool utility"
@@ -412,8 +420,12 @@ mkdir -p "${TEMPDIR}"/{certs,ssl/{certs,java},pki/{nssdb,anchors},work}
 if test "${GET}" == "1"; then
   HOST=$(echo "${URL}" | /usr/bin/cut -d / -f 3)
   _url=$(echo "${URL}" | sed 's@raw-file@log@')
+  SARGS="-ign_eof -connect ${HOST}:443"
+  if test "${PROXY}x" != "x"; then
+    SARGS="${SARGS} -proxy ${PROXY}"
+  fi
   echo GET ${_url} | \
-  ${OPENSSL} s_client -ign_eof -connect ${HOST}:443 2>/dev/null > "${TEMPDIR}/certdata.txt.log"
+  ${OPENSSL} s_client ${SARGS} 2>/dev/null > "${TEMPDIR}/certdata.txt.log"
   unset _url
 
   # Error out here if we couldn't get the file
@@ -436,7 +448,7 @@ if test "${GET}" == "1"; then
 
   # Download the new file
   echo GET ${URL} | \
-  ${OPENSSL} s_client -ign_eof -connect ${HOST}:443 2>/dev/null >> "${CERTDATA}"
+  ${OPENSSL} s_client ${SARGS} 2>/dev/null >> "${CERTDATA}"
   _line=$(( $(grep -n "certdata.txt" "${CERTDATA}" | cut -d ":" -f 1) - 1))
   sed -e "1,${_line}d" -i "${CERTDATA}"
   sed "1i # Revision:${REVISION}" -i "${CERTDATA}"

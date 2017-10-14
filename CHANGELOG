@@ -1,3 +1,6 @@
+0.6      - Allow use of proxy with OpenSSL s_client
+         - Really check revision before download
+         - Make sure download was successful before testing values
 0.5      - Install systemd timer and service units
          - Add uninstall and clean targets
 0.4      - Add email and code signing flat file certificate stores
