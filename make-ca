@@ -8,7 +8,7 @@
 # Authors: DJ Lucas
 #          Bruce Dubbs
 
-VERSION="0.5"
+VERSION="0.6"
 
 # Get/set defaults
 if test -f /etc/make-ca.conf; then
@@ -415,7 +415,26 @@ if test "${GET}" == "1"; then
   echo GET ${_url} | \
   ${OPENSSL} s_client -ign_eof -connect ${HOST}:443 2>/dev/null > "${TEMPDIR}/certdata.txt.log"
   unset _url
+
+  # Error out here if we couldn't get the file
+  grep -m1 "<i>" "${TEMPDIR}/certdata.txt.log" 2>&1>/dev/null
+  if test "$?" -gt 0; then
+    echo "Unable to get revision from server! Exiting."
+    exit 1
+  fi
+
+  # See if we need to update before downloading the file
   REVISION=$(grep -m1 "<i>" "${TEMPDIR}/certdata.txt.log" | cut -d "<" -f 1)
+  if test -e "${DESTDIR}${SSLDIR}/certdata.txt"; then
+    OLDVERSION=$(grep "^# Revision:" "${DESTDIR}${SSLDIR}/certdata.txt" | \
+                      cut -d ":" -f 2)
+    if test "${OLDVERSION}x" == "${REVISION}x" -a "${FORCE}" == "0"; then
+      echo "No update required! Use --force to update anyway."
+      exit 0
+    fi
+  fi
+
+  # Download the new file
   echo GET ${URL} | \
   ${OPENSSL} s_client -ign_eof -connect ${HOST}:443 2>/dev/null >> "${CERTDATA}"
   _line=$(( $(grep -n "certdata.txt" "${CERTDATA}" | cut -d ":" -f 1) - 1))
@@ -442,7 +461,6 @@ if test "${REVISION}x" == "x"; then
   sleep 2
   REVISION="$(date -u +%Y%m%d-%H%M)"
   echo "# Revision:${REVISION}" > "${WORKDIR}/certdata.txt"
-
 else
   if test "${FORCE}" == "1"; then
     echo "Output forced. Will run conversion unconditionally."
@@ -450,12 +468,11 @@ else
   elif test "${DESTDIR}x" == "x"; then
     test -f "${CABUNDLE}" &&
     OLDVERSION=$(grep "^# Revision:" "${CABUNDLE}" | cut -d ":" -f 2)
+    if test "${OLDVERSION}x" == "${REVISION}x"; then
+      echo "No update required! Use --force to update anyway."
+      exit 0
+    fi
   fi
-fi
-
-if test "${OLDVERSION}x" == "${REVISION}x"; then
-  echo "No update required! Use --force to update anyway."
-  exit 0
 fi
 
 cat "${CERTDATA}" >> "${WORKDIR}/certdata.txt"
