@@ -8,7 +8,7 @@
 # Authors: DJ Lucas
 #          Bruce Dubbs
 
-VERSION="0.6"
+VERSION="0.7"
 
 # Get/set defaults
 if test -f /etc/make-ca.conf; then
@@ -25,7 +25,7 @@ else
     SMBUNDLE="${SSLDIR}/email-ca-bundle.crt"
     CSBUNDLE="${SSLDIR}/objsign-ca-bundle.crt"
     CERTDIR="${SSLDIR}/certs"
-    KEYSTORE="${SSLDIR}/java/cacerts"
+    KEYSTORE="${SSLDIR}/java"
     NSSDB="${PKIDIR}/nssdb"
     LOCALDIR="${SSLDIR}/local"
     DESTDIR=""
@@ -98,7 +98,7 @@ function get_args(){
         SSLDIR="${2}"
         CABUNDLE="${SSLDIR}/ca-bundle.crt"
         CERTDIR="${SSLDIR}/certs"
-        KEYSTORE="${SSLDIR}/java/cacerts"
+        KEYSTORE="${SSLDIR}/java"
         LOCALDIR="${SSLDIR}/local"
         echo "${@}" | grep -e "-c " -e "--cafile" \
                            -e "-d " -e "--cadir"  \
@@ -274,8 +274,9 @@ function showhelp(){
   echo "                         The output directory for the OpenSSL trusted"
   echo "                         CA certificates"
   echo ""
-  echo "        -j, --javacerts [\$SSLDIR/java/cacerts]"
-  echo "                         The output path for the Java cacerts file"
+  echo "        -j, --javacerts [\$SSLDIR/java"
+  echo "                         The output directory for the Java"
+  echo "                         cacerts.{jks,p12} files"
   echo ""
   echo "        -l, --localdir [\$SSLDIR/local]"
   echo "                         The path to a local set of OpenSSL trusted"
@@ -607,6 +608,44 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
     echo "Added to NSS shared DB with trust '${satrust},${smtrust},${cstrust}'."
   fi
 
+  # Import all certificates with trust args to the java cacerts.p12 file
+  if test "${WITH_JAVA}" == "1"; then
+    # Remove existing certificate
+    "${KEYTOOL}" -delete -noprompt -alias "${certname}"       \
+                 -keystore "${TEMPDIR}/ssl/java/cacerts.p12"  \
+                 -storepass 'changeit' 2>&1> /dev/null
+    # Determine ExtendedKeyUsage
+    EKU=""
+    EKUVAL=""
+    if test "${satrust}" == "C"; then EKU="serverAuth"; fi
+    if test "${catrust}" == "C"; then
+      if test "${EKU}" == ""; then
+        EKU="clientAuth"
+      else
+        EKU="${EKU},clientAuth"
+      fi
+    fi
+    if test "${cstrust}" == "C"; then
+      if test "${EKU}" == ""; then
+        EKU="codeSigning"
+      else
+        EKU="${EKU},codeSigning"
+      fi
+    fi
+    if test "${EKU}" != ""; then
+      EKUVAL="-ext EKU=${EKU}"
+      "${KEYTOOL}" -importcert -file tempfile.crt -storetype PKCS12     \
+                   -noprompt -alias "${certname}" -storepass 'changeit' \
+                   -keystore "${TEMPDIR}/ssl/java/cacerts.p12" $EKUVAL  \
+                   2>&1> /dev/null | \
+      sed -e "s@Certificate was a@A@" \
+          -e 's@keystore@Java cacerts (PKCS#12) with trust '${satrust},${smtrust},${cstrust}'.@' \
+          | sed 's@p@@'
+      unset EKU
+      unset EKUVAL
+    fi
+  fi
+
   # Clean up the directory and environment as we go
   rm -f tempfile.crt
   unset keyhash subject certname
@@ -656,6 +695,13 @@ test -d "${DESTDIR}${CERTDIR}" && mv "${DESTDIR}${CERTDIR}" \
 install -dm755 "${DESTDIR}${CERTDIR}" 2>&1>/dev/null
 install -m644 "${TEMPDIR}"/ssl/certs/*.pem "${DESTDIR}${CERTDIR}" &&
 rm -rf "${DESTDIR}${CERTDIR}.old"
+
+# Install Java cacerts.p12 in ${KEYSTORE}
+test -f "${DESTDIR}${KEYSTORE}/cacerts.p12" &&
+        mv "${DESTDIR}${KEYSTORE}/cacerts.p12{,.old}"
+install -dm755 "${DESTDIR}${KEYSTORE}"
+install -m644 "${TEMPDIR}/ssl/java/cacerts.p12" "${DESTDIR}${KEYSTORE}"
+rm -f "${DESTDIR}${KEYSTORE}/cacerts.p12.old"
 
 # Import any certs in $LOCALDIR
 # Don't do any checking, just trust the admin
@@ -751,8 +797,16 @@ if test -d "${LOCALDIR}"; then
     echo "Added to p11-kit anchor directory with trust '${satrust},${smtrust},${cstrust}'."
 
     # Install into OpenSSL certificate store
-    "${OPENSSL}" x509 -in "${cert}" -text -fingerprint \
-                      -setalias "${certname}"          \
+
+    # Get args for OpenSSL trust settings
+    saarg="$(convert_trust_arg "${satrust}" sa)"
+    smarg="$(convert_trust_arg "${smtrust}" sm)"
+    csarg="$(convert_trust_arg "${cstrust}" cs)"
+    # Not currently included in NSS certdata.txt
+    #caarg="$(convert_trust_arg "${catrust}" ca)"
+
+    "${OPENSSL}" x509 -in "${cert}" -text -fingerprint                    \
+                      -setalias "${certname}" ${saarg} ${smarg} ${csarg}  \
                       >> "${DESTDIR}${CERTDIR}/${keyhash}.pem"
     echo "Added to OpenSSL certificate directory with trust '${satrust},${smtrust},${cstrust},${catrust}'."
 
@@ -764,6 +818,47 @@ if test -d "${LOCALDIR}"; then
                     -n "${certname}"
       echo "Added to NSS shared DB with trust '${satrust},${smtrust},${cstrust}'."
     fi
+    # Import certificate (with trust args) into the java cacerts.p12 file
+    if test "${WITH_JAVA}" == "1"; then
+      # Remove existing certificate
+      "${KEYTOOL}" -delete -noprompt -alias "${certname}"         \
+                   -keystore "${DESTDIR}${KEYSTORE}/cacerts.p12"  \
+                   -storepass 'changeit' 2>&1> /dev/null
+      # Determing ExtendedKeyUsage
+      EKU=""
+      if test "${satrust}" == "C"; then EKU="serverAuth"; fi
+      if test "${catrust}" == "C"; then
+        if test "${EKU}" == ""; then
+          EKU="clientAuth"
+        else
+          EKU="${EKU},clientAuth"
+        fi
+      fi
+      if test "${cstrust}" == "C"; then
+        if test "${EKU}" == ""; then
+          EKU="codeSigning"
+        else
+          EKU="${EKU},codeSigning"
+        fi
+      fi
+      if test "${EKU}" != ""; then
+        EKUVAL="-ext EKU=${EKU}"
+        "${OPENSSL}" x509 -in "${cert}" -text -fingerprint                    \
+                     -setalias "${certname}" > "${TEMPDIR}/tempcert.pem"
+
+        "${KEYTOOL}" -importcert -noprompt -alias "${certname}"    \
+                     -keystore "${DESTDIR}${KEYSTORE}/cacerts.p12" \
+                     -storepass 'changeit' $EKUVAL                 \
+                     -file "${TEMPDIR}/tempcert.pem"               \
+                     2>&1> /dev/null | \
+        sed -e "s@Certificate was a@A@" \
+            -e 's@keystore@Java cacerts (PKCS#12) with trust '${satrust},${smtrust},${cstrust}'.@' \
+            | sed 's@p@@'
+        rm -f "${TEMPDIR}/tempcert.pem"
+        unset EKU
+        unset EKUVAL
+      fi
+    fi
 
     unset keyhash subject count certname
     unset trustlist rejectlist satrust smtrust cstrust catrust
@@ -774,25 +869,24 @@ if test -d "${LOCALDIR}"; then
   unset cert
 fi
 
-# Install Java Cacerts
-if test "${WITH_JAVA}" == "1"; then
-  javafile=`basename "${KEYSTORE}"`
-  javadir=`echo "${KEYSTORE}" | sed "s@/${javafile}@@"`
-  install -vdm755 "${DESTDIR}${javadir}" 2>&1>/dev/null
-  test -f "${DESTDIR}${KEYSTORE}" && mv "${DESTDIR}${KEYSTORE}" \
-                                        "${DESTDIR}${KEYSTORE}.old"
-fi
-
-# Build java and ca-bundle.crt
+# Build cacerts.jks and ca-bundle.crt
 # Generate the bundle
 bundlefile=`basename "${CABUNDLE}"`
 bundledir=`echo "${CABUNDLE}" | sed "s@/${bundlefile}@@"`
 install -vdm755 "${DESTDIR}${bundledir}" 2>&1>/dev/null
 test -f "${DESTDIR}${CABUNDLE}" && mv "${DESTDIR}${CABUNDLE}" \
                                       "${DESTDIR}${CABUNDLE}.old"
+test -f "${DESTDIR}${SMBUNDLE}" && mv "${DESTDIR}${SMBUNDLE}" \
+                                      "${DESTDIR}${SMBUNDLE}.old"
+test -f "${DESTDIR}${CSBUNDLE}" && mv "${DESTDIR}${CSBUNDLE}" \
+                                      "${DESTDIR}${CSBUNDLE}.old"
+test -f "${DESTDIR}${KEYSTORE}/cacerts.jks" && 
+mv "${DESTDIR}${KEYSTORE}"/cacerts.jks{,.old}
+
+
 echo "# Revision:${REVISION}" > "${DESTDIR}${CABUNDLE}"
 
-echo "Processing certs for Java and GNUTLS stores..."
+echo "Processing certs for Java (JKS) and GNUTLS stores..."
 # Generate the bundle
 
 for cert in `find "${DESTDIR}${CERTDIR}" -name "*.pem"`; do
@@ -824,14 +918,18 @@ for cert in `find "${DESTDIR}${CERTDIR}" -name "*.pem"`; do
     cat "${TEMPDIR}/ssl/certs/${keyhash}.pem" >> "${DESTDIR}${CABUNDLE}"
     echo "Added to GnuTLS certificate bundle."
 
-    # Install Java keystore
+    # Add to Java keystore (JKS)
     if test "${WITH_JAVA}" == "1"; then
-      "${KEYTOOL}" -import -noprompt -alias "${certname}"      \
-                   -keystore "${DESTDIR}${KEYSTORE}"           \
-                   -storepass 'changeit'                       \
-                   -file "${TEMPDIR}/ssl/certs/${keyhash}.pem" \
-                   2>&1> /dev/null | \
-      sed -e 's@Certificate was a@A@' -e 's@keystore@Java keystore.@'
+      # Remove certificate if it already exists
+      "${KEYTOOL}" -delete -noprompt -alias "${certname}"        \
+                   -keystore "${DESTDIR}${KEYSTORE}/cacerts.jks" \
+                   -storepass 'changeit' 2>&1> /dev/null
+      # Import it
+      "${KEYTOOL}" -importcert -file "${TEMPDIR}/ssl/certs/${keyhash}.pem" \
+                   -noprompt -alias "${certname}" -storetype JKS           \
+                   -keystore "${DESTDIR}${KEYSTORE}/cacerts.jks"           \
+                   -storepass 'changeit' 2>&1> /dev/null |                 \
+      sed -e 's@Certificate was a@A@' -e 's@keystore@Java (JKS) keystore.@'
     fi
   fi
   if test "${smtrust}x" == "Cx"; then
@@ -868,5 +966,7 @@ fi
 
 # Clean up the mess
 rm -rf "${TEMPDIR}"
+rm -rf "${DESTDIR}${bundledir}/*.old"
+rm -f  "${DESTDIR}${KEYSTORE}/cacerts.jks.old"
 
 # End /usr/sbin/make-ca
