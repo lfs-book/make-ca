@@ -1,5 +1,6 @@
 0.7      - Generate both PKCS#12 and JKS stores for Java
          - Local certs keep out of band trust when copied to system certs
+         - Remove use of .old files/directories
 0.6      - Allow use of proxy with OpenSSL s_client
          - Really check revision before download
          - Make sure download was successful before testing values

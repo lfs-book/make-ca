@@ -618,7 +618,7 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
     EKU=""
     EKUVAL=""
     if test "${satrust}" == "C"; then EKU="serverAuth"; fi
-    if test "${catrust}" == "C"; then
+    if test "${smtrust}" == "C"; then
       if test "${EKU}" == ""; then
         EKU="clientAuth"
       else
@@ -674,34 +674,27 @@ if test "${WITH_NSS}" == "1"; then
       -e 's/library=/library=libnsssysinit.so/'          \
       -e 's/Flags=internal/Flags=internal,moduleDBOnly/' \
       -i "${TEMPDIR}/pki/nssdb/pkcs11.txt" 
-  test -d "${DESTDIR}${NSSDB}" && mv "${DESTDIR}${NSSDB}" \
-                                     "${DESTDIR}${NSSDB}.old"
+  test -d "${DESTDIR}${NSSDB}" && rm -rf "${DESTDIR}${NSSDB}"
   install -dm755 "${DESTDIR}${NSSDB}" 2>&1>/dev/null
   install -m644 "${TEMPDIR}"/pki/nssdb/{cert9.db,key4.db,pkcs11.txt} \
-                 "${DESTDIR}${NSSDB}" &&
-  rm -rf "${DESTDIR}${NSSDB}.old"
+                 "${DESTDIR}${NSSDB}" 
 fi
 
 # Install anchors in $ANCHORDIR
-test -d "${DESTDIR}${ANCHORDIR}" && mv "${DESTDIR}${ANCHORDIR}"\
-                                       "${DESTDIR}${ANCHORDIR}.old"
+test -d "${DESTDIR}${ANCHORDIR}" && rm -rf "${DESTDIR}${ANCHORDIR}"
 install -dm755 "${DESTDIR}${ANCHORDIR}" 2>&1>/dev/null
-install -m644 "${TEMPDIR}"/pki/anchors/*.pem "${DESTDIR}${ANCHORDIR}" &&
-rm -rf "${DESTDIR}${ANCHORDIR}.old"
+install -m644 "${TEMPDIR}"/pki/anchors/*.pem "${DESTDIR}${ANCHORDIR}"
 
 # Install certificates in $CERTDIR
-test -d "${DESTDIR}${CERTDIR}" && mv "${DESTDIR}${CERTDIR}" \
-                                     "${DESTDIR}${CERTDIR}.old"
+test -d "${DESTDIR}${CERTDIR}" && rm -rf "${DESTDIR}${CERTDIR}"
 install -dm755 "${DESTDIR}${CERTDIR}" 2>&1>/dev/null
-install -m644 "${TEMPDIR}"/ssl/certs/*.pem "${DESTDIR}${CERTDIR}" &&
-rm -rf "${DESTDIR}${CERTDIR}.old"
+install -m644 "${TEMPDIR}"/ssl/certs/*.pem "${DESTDIR}${CERTDIR}"
 
 # Install Java cacerts.p12 in ${KEYSTORE}
 test -f "${DESTDIR}${KEYSTORE}/cacerts.p12" &&
-        mv "${DESTDIR}${KEYSTORE}/cacerts.p12{,.old}"
+        rm -f "${DESTDIR}${KEYSTORE}/cacerts.p12"
 install -dm755 "${DESTDIR}${KEYSTORE}"
 install -m644 "${TEMPDIR}/ssl/java/cacerts.p12" "${DESTDIR}${KEYSTORE}"
-rm -f "${DESTDIR}${KEYSTORE}/cacerts.p12.old"
 
 # Import any certs in $LOCALDIR
 # Don't do any checking, just trust the admin
@@ -874,17 +867,15 @@ fi
 bundlefile=`basename "${CABUNDLE}"`
 bundledir=`echo "${CABUNDLE}" | sed "s@/${bundlefile}@@"`
 install -vdm755 "${DESTDIR}${bundledir}" 2>&1>/dev/null
-test -f "${DESTDIR}${CABUNDLE}" && mv "${DESTDIR}${CABUNDLE}" \
-                                      "${DESTDIR}${CABUNDLE}.old"
-test -f "${DESTDIR}${SMBUNDLE}" && mv "${DESTDIR}${SMBUNDLE}" \
-                                      "${DESTDIR}${SMBUNDLE}.old"
-test -f "${DESTDIR}${CSBUNDLE}" && mv "${DESTDIR}${CSBUNDLE}" \
-                                      "${DESTDIR}${CSBUNDLE}.old"
-test -f "${DESTDIR}${KEYSTORE}/cacerts.jks" && 
-mv "${DESTDIR}${KEYSTORE}"/cacerts.jks{,.old}
+rm -f "${DESTDIR}${CABUNDLE}"
+rm -f "${DESTDIR}${SMBUNDLE}"
+rm -f "${DESTDIR}${CSBUNDLE}"
+rm -f "${DESTDIR}${KEYSTORE}/cacerts.jks"
 
 
 echo "# Revision:${REVISION}" > "${DESTDIR}${CABUNDLE}"
+echo "# Revision:${REVISION}" > "${DESTDIR}${SMBUNDLE}"
+echo "# Revision:${REVISION}" > "${DESTDIR}${CSBUNDLE}"
 
 echo "Processing certs for Java (JKS) and GNUTLS stores..."
 # Generate the bundle
@@ -928,7 +919,7 @@ for cert in `find "${DESTDIR}${CERTDIR}" -name "*.pem"`; do
       "${KEYTOOL}" -importcert -file "${TEMPDIR}/ssl/certs/${keyhash}.pem" \
                    -noprompt -alias "${certname}" -storetype JKS           \
                    -keystore "${DESTDIR}${KEYSTORE}/cacerts.jks"           \
-                   -storepass 'changeit' 2>&1> /dev/null |                 \
+                   -storepass 'changeit' 2>&1> /dev/null |        \
       sed -e 's@Certificate was a@A@' -e 's@keystore@Java (JKS) keystore.@'
     fi
   fi
@@ -966,7 +957,5 @@ fi
 
 # Clean up the mess
 rm -rf "${TEMPDIR}"
-rm -rf "${DESTDIR}${bundledir}/*.old"
-rm -f  "${DESTDIR}${KEYSTORE}/cacerts.jks.old"
 
 # End /usr/sbin/make-ca
