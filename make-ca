@@ -947,7 +947,7 @@ for cert in `find "${DESTDIR}${CERTDIR}" -name "*.pem"`; do
   fi
 done
 
-/usr/bin/c_rehash "${DESTDIR}${CERTDIR}" 2>&1>/dev/null
+"${OPENSSL}" rehash "${DESTDIR}${CERTDIR}" 2>&1>/dev/null
 popd > /dev/null
 
 # Install certdata.txt
