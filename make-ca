@@ -4,15 +4,17 @@
 # Script to create p11-kit anchors, OpenSSL certs directory, GnuTLS certificate
 # bundle, NSS shared DB, and Java cacerts from upstream certdata.txt and local
 # sources
-# 
+#
 # Authors: DJ Lucas
 #          Bruce Dubbs
+#          Graham Weldon
 
 VERSION="0.7"
+${MAKE_CA_CONF:="/etc/make-ca.conf"}
 
 # Get/set defaults
-if test -f /etc/make-ca.conf; then
-    . /etc/make-ca.conf
+if test -f "${MAKE_CA_CONF}"; then
+    . "${MAKE_CA_CONF}"
 else
     CERTDATA="certdata.txt"
     PKIDIR="/etc/pki"
