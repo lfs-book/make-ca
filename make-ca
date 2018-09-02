@@ -8,7 +8,7 @@
 # Authors: DJ Lucas
 #          Bruce Dubbs
 
-VERSION="0.7"
+VERSION="0.9"
 
 # Get/set defaults
 if test -f /etc/make-ca.conf; then
@@ -18,14 +18,14 @@ else
     PKIDIR="/etc/pki"
     SSLDIR="/etc/ssl"
     CERTUTIL="/usr/bin/certutil"
-    KEYTOOL="/opt/jdk/bin/keytool"
     OPENSSL="/usr/bin/openssl"
+    TRUST="/usr/bin/trust"
     ANCHORDIR="${PKIDIR}/anchors"
     CABUNDLE="${SSLDIR}/ca-bundle.crt"
     SMBUNDLE="${SSLDIR}/email-ca-bundle.crt"
     CSBUNDLE="${SSLDIR}/objsign-ca-bundle.crt"
     CERTDIR="${SSLDIR}/certs"
-    KEYSTORE="${SSLDIR}/java"
+    KEYSTORE="${SSLDIR}/java/cacerts"
     NSSDB="${PKIDIR}/nssdb"
     LOCALDIR="${SSLDIR}/local"
     DESTDIR=""
@@ -49,12 +49,11 @@ export LANG=en_US.utf8
 
 TEMPDIR=$(mktemp -d)
 WORKDIR="${TEMPDIR}/work"
-WITH_NSS=1
-WITH_JAVA=1
 CERTDATAY=0
 FORCE=0
 GET=0
 REBUILD=0
+WITH_NSS=1
 
 function get_args(){
   while test -n "${1}" ; do
@@ -98,7 +97,7 @@ function get_args(){
         SSLDIR="${2}"
         CABUNDLE="${SSLDIR}/ca-bundle.crt"
         CERTDIR="${SSLDIR}/certs"
-        KEYSTORE="${SSLDIR}/java"
+        KEYSTORE="${SSLDIR}/java/cacerts"
         LOCALDIR="${SSLDIR}/local"
         echo "${@}" | grep -e "-c " -e "--cafile" \
                            -e "-d " -e "--cadir"  \
@@ -185,11 +184,6 @@ function get_args(){
         PROXY="${2}"
         shift 2
       ;;
-      -k | --keytool)
-        check_arg $1 $2
-        KEYTOOL="${2}"
-        shift 2
-      ;;
       -r | --rebuild)
         if test "${CERTDATAY}" == "0" -a "${GET}" == "0"; then
           REBUILD="1"
@@ -208,6 +202,11 @@ function get_args(){
       -t | --certutil)
         check_arg $1 $2
         CERTUTIL="${2}"
+        shift 2
+      ;;
+      -u | --trust)
+        check_arg $1 $2
+        TRUST="${2}"
         shift 2
       ;;
       -f | --force)
@@ -248,11 +247,11 @@ function showhelp(){
   echo "build, but has been written to be generic enough for any Linux distribution."
   echo ""
   echo "        -C, --certdata [certdata.txt]"
-  echo "                         The location of the certificates source."
+  echo "                         The location of the certificates source"
   echo ""
   echo "        -D, --destdir [/]"
   echo "                         Change the output directory and use relative"
-  echo "                         paths for all other values."
+  echo "                         paths for all other values"
   echo ""
   echo "        -P, --pkidir [/etc/pki]"
   echo "                         The output PKI directory - Cannot be used with"
@@ -265,7 +264,7 @@ function showhelp(){
   echo ""
   echo "        -a, --anchordir [\$PKIDIR/anchors]"
   echo "                         The output directory for OpenSSL trusted"
-  echo "                         CA certificates used as trust anchors."
+  echo "                         CA certificates used as trust anchors"
   echo ""
   echo "        -c, --cafile [\$SSLDIR/ca-bundle.crt]"
   echo "                         The output filename for the PEM formated bundle"
@@ -274,15 +273,14 @@ function showhelp(){
   echo "                         The output directory for the OpenSSL trusted"
   echo "                         CA certificates"
   echo ""
-  echo "        -j, --javacerts [\$SSLDIR/java"
-  echo "                         The output directory for the Java"
-  echo "                         cacerts.{jks,p12} files"
+  echo "        -j, --javacerts [\$SSLDIR/java/cacerts"
+  echo "                         The output filename for the Java cacerts file"
   echo ""
   echo "        -l, --localdir [\$SSLDIR/local]"
   echo "                         The path to a local set of OpenSSL trusted"
   echo "                         certificates, used to both override trust bits"
   echo "                         from upstream sources and provide locally"
-  echo "                         provided certifiates."
+  echo "                         provided certifiates"
   echo ""
   echo "        -n, --nssdb [\$PKIDIR/nssdb]"
   echo "                         The output path for the shared NSS DB"
@@ -290,24 +288,24 @@ function showhelp(){
   echo "        -p, --proxy [URI:PORT]"
   echo "                         Use proxy server for download"
   echo ""
-  echo "        -k, --keytool [PATH]"
-  echo "                         The path to the java keytool utility"
-  echo ""
   echo "        -s, --openssl [PATH]"
   echo "                         The path to the openssl utility"
   echo ""
   echo "        -t, --certutil [PATH]"
   echo "                         The path the certutil utility"
   echo ""
+  echo "        -u, --trust [PATH]"
+  echo "                         The path to p11-kit trust utility"
+  echo ""
   echo "        -f, --force      Force run, even if source is not newer"
   echo ""
   echo "        -g, --get        Download certdata.txt directly from Mozilla's"
-  echo "                         Mecurial server."
+  echo "                         Mecurial server"
   echo ""
   echo "        -h, --help       Show this help message and exit"
   echo ""
   echo "        -r, --rebuild    Rebuild the enitre PKI tree using the previous"
-  echo "                         certdata.txt file."
+  echo "                         certdata.txt file"
   echo ""
   echo "        -v. --version    Show version information and exit"
   echo ""
@@ -411,7 +409,6 @@ get-p11-val() {
 get_args $@
 
 test -x "${CERTUTIL}" || WITH_NSS=0
-test -x "${KEYTOOL}" || WITH_JAVA=0
 test ! -x "${OPENSSL}" && echo "OpenSSL not found at ${OPENSSL}. Exiting..." &&
 exit 1
 
@@ -491,11 +488,6 @@ fi
 cat "${CERTDATA}" >> "${WORKDIR}/certdata.txt"
 pushd "${WORKDIR}" > /dev/null
 
-if test "${WITH_NSS}" == "1"; then
-  # Create a blank NSS DB
-  "${CERTUTIL}" -N --empty-password -d "sql:${TEMPDIR}/pki/nssdb"
-fi
-
 # Get a list of starting lines for each cert
 CERTBEGINLIST=`grep -n "^# Certificate" "${WORKDIR}/certdata.txt" | \
                       cut -d ":" -f1`
@@ -534,11 +526,6 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
   printf $(awk '/^CKA_VALUE/{flag=1;next}/^END/{flag=0}flag{printf $0}' \
   "${tempfile}") | "${OPENSSL}" x509 -text -inform DER -fingerprint \
   > tempfile.crt
-
-  # Get individual values for certificates
-  certkey="$(${OPENSSL} x509 -in tempfile.crt -noout -pubkey)"
-  certcer="$(${OPENSSL} x509 -in tempfile.crt)"
-  certtxt="$(${OPENSSL} x509 -in tempfile.crt -noout -text)"
 
   # Get p11-kit label, oid, and values
   p11label="$(grep -m1 "Issuer" ${tempfile} | grep -o CN=.*$ | \
@@ -592,13 +579,6 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
   echo "${certcer}" >> "${anchorfile}"
   echo "${certtxt}" | sed 's@^@#@' >> "${anchorfile}"
   echo "Added to p11-kit anchor directory with trust '${satrust},${smtrust},${cstrust}'."
-  
-  # Import certificate into the temporary certificate directory with
-  # trust arguments
-  "${OPENSSL}" x509 -in tempfile.crt -text -fingerprint \
-      -setalias "${certname}" ${saarg} ${smarg} ${csarg}    \
-      > "${TEMPDIR}/ssl/certs/${keyhash}.pem"
-  echo "Added to OpenSSL certificate directory with trust '${satrust},${smtrust},${cstrust}'."
 
   # Import all certificates with trust args to the temporary NSS DB
   if test "${WITH_NSS}" == "1"; then
@@ -608,93 +588,32 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
     echo "Added to NSS shared DB with trust '${satrust},${smtrust},${cstrust}'."
   fi
 
-  # Import all certificates with trust args to the java cacerts.p12 file
-  if test "${WITH_JAVA}" == "1"; then
-    # Remove existing certificate
-    "${KEYTOOL}" -delete -noprompt -alias "${certname}"       \
-                 -keystore "${TEMPDIR}/ssl/java/cacerts.p12"  \
-                 -storepass 'changeit' 2>&1> /dev/null
-    # Determine ExtendedKeyUsage
-    EKU=""
-    EKUVAL=""
-    if test "${satrust}" == "C"; then EKU="serverAuth"; fi
-    if test "${smtrust}" == "C"; then
-      if test "${EKU}" == ""; then
-        EKU="clientAuth"
-      else
-        EKU="${EKU},clientAuth"
-      fi
-    fi
-    if test "${cstrust}" == "C"; then
-      if test "${EKU}" == ""; then
-        EKU="codeSigning"
-      else
-        EKU="${EKU},codeSigning"
-      fi
-    fi
-    if test "${EKU}" != ""; then
-      EKUVAL="-ext EKU=${EKU}"
-      "${KEYTOOL}" -importcert -file tempfile.crt -storetype PKCS12     \
-                   -noprompt -alias "${certname}" -storepass 'changeit' \
-                   -keystore "${TEMPDIR}/ssl/java/cacerts.p12" $EKUVAL  \
-                   2>&1> /dev/null | \
-      sed -e "s@Certificate was a@A@" \
-          -e 's@keystore@Java cacerts (PKCS#12) with trust '${satrust},${smtrust},${cstrust}'.@' \
-          | sed 's@p@@'
-      unset EKU
-      unset EKUVAL
-    fi
-  fi
-
   # Clean up the directory and environment as we go
   rm -f tempfile.crt
-  unset keyhash subject certname
-  unset satrust smtrust cstrust catrust sarg smarg csarg caarg
-  unset p11trust p11oid p11value trustp11 certkey certcer certtxt
+  unset keyhash subject count certname
+  unset trustlist rejectlist satrust smtrust cstrust catrust p11label anchrorfile
+  unset p11trust p11oid p11value trustp11
+
   echo -e "\n"
 done
 unset tempfile
-
-# Sanity check
-count=$(ls "${TEMPDIR}"/ssl/certs/*.pem | wc -l)
-# Historically there have been between 152 and 190 certs
-# A minimum of 150 should be safe for a rudimentry sanity check
-if test "${count}" -lt "150" ; then
-    echo "Error! Only ${count} certificates were generated!"
-    echo "Exiting without update!"
-    echo ""
-    echo "${TEMPDIR} is the temporary working directory"
-    exit 2
-fi
-unset count
-
-# Install NSS Shared DB
-if test "${WITH_NSS}" == "1"; then
-  sed -e "s@${TEMPDIR}/pki/nssdb@${NSSDB}@"              \
-      -e 's/library=/library=libnsssysinit.so/'          \
-      -e 's/Flags=internal/Flags=internal,moduleDBOnly/' \
-      -i "${TEMPDIR}/pki/nssdb/pkcs11.txt" 
-  test -d "${DESTDIR}${NSSDB}" && rm -rf "${DESTDIR}${NSSDB}"
-  install -dm755 "${DESTDIR}${NSSDB}" 2>&1>/dev/null
-  install -m644 "${TEMPDIR}"/pki/nssdb/{cert9.db,key4.db,pkcs11.txt} \
-                 "${DESTDIR}${NSSDB}" 
-fi
 
 # Install anchors in $ANCHORDIR
 test -d "${DESTDIR}${ANCHORDIR}" && rm -rf "${DESTDIR}${ANCHORDIR}"
 install -dm755 "${DESTDIR}${ANCHORDIR}" 2>&1>/dev/null
 install -m644 "${TEMPDIR}"/pki/anchors/*.pem "${DESTDIR}${ANCHORDIR}"
 
-# Install certificates in $CERTDIR
-test -d "${DESTDIR}${CERTDIR}" && rm -rf "${DESTDIR}${CERTDIR}"
-install -dm755 "${DESTDIR}${CERTDIR}" 2>&1>/dev/null
-install -m644 "${TEMPDIR}"/ssl/certs/*.pem "${DESTDIR}${CERTDIR}"
-
-# Install Java cacerts.p12 in ${KEYSTORE}
-test -f "${DESTDIR}${KEYSTORE}/cacerts.p12" &&
-        rm -f "${DESTDIR}${KEYSTORE}/cacerts.p12"
-install -dm755 "${DESTDIR}${KEYSTORE}"
-install -m644 "${TEMPDIR}/ssl/java/cacerts.p12" "${DESTDIR}${KEYSTORE}"
+# Install NSS Shared DB
+if test "${WITH_NSS}" == "1"; then
+  sed -e "s@${TEMPDIR}/pki/nssdb@${NSSDB}@"              \
+      -e 's/library=/library=libnsssysinit.so/'          \
+      -e 's/Flags=internal/Flags=internal,moduleDBOnly/' \
+      -i "${TEMPDIR}/pki/nssdb/pkcs11.txt"
+  test -d "${DESTDIR}${NSSDB}" && rm -rf "${DESTDIR}${NSSDB}"
+  install -dm755 "${DESTDIR}${NSSDB}" 2>&1>/dev/null
+  install -m644 "${TEMPDIR}"/pki/nssdb/{cert9.db,key4.db,pkcs11.txt} \
+                 "${DESTDIR}${NSSDB}"
+fi
 
 # Import any certs in $LOCALDIR
 # Don't do any checking, just trust the admin
@@ -789,173 +708,55 @@ if test -d "${LOCALDIR}"; then
     echo "${certtxt}" | sed 's@^@#@' >> "${anchorfile}"
     echo "Added to p11-kit anchor directory with trust '${satrust},${smtrust},${cstrust}'."
 
-    # Install into OpenSSL certificate store
-
-    # Get args for OpenSSL trust settings
-    saarg="$(convert_trust_arg "${satrust}" sa)"
-    smarg="$(convert_trust_arg "${smtrust}" sm)"
-    csarg="$(convert_trust_arg "${cstrust}" cs)"
-    # Not currently included in NSS certdata.txt
-    #caarg="$(convert_trust_arg "${catrust}" ca)"
-
-    "${OPENSSL}" x509 -in "${cert}" -text -fingerprint                    \
-                      -setalias "${certname}" ${saarg} ${smarg} ${csarg}  \
-                      >> "${DESTDIR}${CERTDIR}/${keyhash}.pem"
-    echo "Added to OpenSSL certificate directory with trust '${satrust},${smtrust},${cstrust},${catrust}'."
-
     # Add to Shared NSS DB
     if test "${WITH_NSS}" == "1"; then
       "${OPENSSL}" x509 -in "${cert}" -text -fingerprint | \
       "${CERTUTIL}" -d "sql:${DESTDIR}${NSSDB}" -A                   \
                     -t "${satrust},${smtrust},${cstrust}"  \
                     -n "${certname}"
-      echo "Added to NSS shared DB with trust '${satrust},${smtrust},${cstrust}'."
-    fi
-    # Import certificate (with trust args) into the java cacerts.p12 file
-    if test "${WITH_JAVA}" == "1"; then
-      # Remove existing certificate
-      "${KEYTOOL}" -delete -noprompt -alias "${certname}"         \
-                   -keystore "${DESTDIR}${KEYSTORE}/cacerts.p12"  \
-                   -storepass 'changeit' 2>&1> /dev/null
-      # Determing ExtendedKeyUsage
-      EKU=""
-      if test "${satrust}" == "C"; then EKU="serverAuth"; fi
-      if test "${catrust}" == "C"; then
-        if test "${EKU}" == ""; then
-          EKU="clientAuth"
-        else
-          EKU="${EKU},clientAuth"
-        fi
-      fi
-      if test "${cstrust}" == "C"; then
-        if test "${EKU}" == ""; then
-          EKU="codeSigning"
-        else
-          EKU="${EKU},codeSigning"
-        fi
-      fi
-      if test "${EKU}" != ""; then
-        EKUVAL="-ext EKU=${EKU}"
-        "${OPENSSL}" x509 -in "${cert}" -text -fingerprint                    \
-                     -setalias "${certname}" > "${TEMPDIR}/tempcert.pem"
-
-        "${KEYTOOL}" -importcert -noprompt -alias "${certname}"    \
-                     -keystore "${DESTDIR}${KEYSTORE}/cacerts.p12" \
-                     -storepass 'changeit' $EKUVAL                 \
-                     -file "${TEMPDIR}/tempcert.pem"               \
-                     2>&1> /dev/null | \
-        sed -e "s@Certificate was a@A@" \
-            -e 's@keystore@Java cacerts (PKCS#12) with trust '${satrust},${smtrust},${cstrust}'.@' \
-            | sed 's@p@@'
-        rm -f "${TEMPDIR}/tempcert.pem"
-        unset EKU
-        unset EKUVAL
-      fi
+    echo "Added to NSS shared DB with trust '${satrust},${smtrust},${cstrust}'."
     fi
 
     unset keyhash subject count certname
-    unset trustlist rejectlist satrust smtrust cstrust catrust
-    unset p11trust p11oid p11value trustp11 certkey certcer certtxt
+    unset trustlist rejectlist satrust smtrust cstrust catrust p11label anchrorfile
+    unset p11trust p11oid p11value trustp11
     echo ""
 
   done
   unset cert
 fi
 
-# Build cacerts.jks and ca-bundle.crt
-# Generate the bundle
-bundlefile=`basename "${CABUNDLE}"`
-bundledir=`echo "${CABUNDLE}" | sed "s@/${bundlefile}@@"`
-install -vdm755 "${DESTDIR}${bundledir}" 2>&1>/dev/null
-rm -f "${DESTDIR}${CABUNDLE}"
-rm -f "${DESTDIR}${SMBUNDLE}"
-rm -f "${DESTDIR}${CSBUNDLE}"
-rm -f "${DESTDIR}${KEYSTORE}/cacerts.jks"
-
-
-echo "# Revision:${REVISION}" > "${DESTDIR}${CABUNDLE}"
-echo "# Revision:${REVISION}" > "${DESTDIR}${SMBUNDLE}"
-echo "# Revision:${REVISION}" > "${DESTDIR}${CSBUNDLE}"
-
-echo "Processing certs for Java (JKS) and GNUTLS stores..."
-# Generate the bundle
-
-for cert in `find "${DESTDIR}${CERTDIR}" -name "*.pem"`; do
-  # Get some information about the certificate
-  keyhash=$("${OPENSSL}" x509 -noout -in "${cert}" -hash)
-  certname=$(grep "Alias" "${cert}")
-
-  # Get trust information
-  trustlist=$("${OPENSSL}" x509 -in "${cert}" -text -trustout | \
-                     grep -A1 "Trusted Uses")
-  satrust=""
-  smtrust=""
-  cstrust=""
-  satrust=$(echo "${trustlist}" | \
-            grep "TLS Web Server" 2>&1> /dev/null && echo "C")
-  smtrust=$(echo "${trustlist}" | \
-            grep "E-mail Protection" 2>&1 >/dev/null && echo "C")
-  cstrust=$(echo "${trustlist}" | \
-            grep "Code Signing" 2>&1 >/dev/null && echo "C")
-
-  if test "${satrust}x" == "Cx"; then
-    echo ""
-    echo "${certname}" | sed 's@Alias:@Certificate: @'
-    echo "Keyhash:      ${keyhash}"
-
-    # Append to the CA bundle
-    "${OPENSSL}" x509 -in "${cert}" -text -fingerprint \
-         > "${TEMPDIR}/ssl/certs/${keyhash}.pem"
-    cat "${TEMPDIR}/ssl/certs/${keyhash}.pem" >> "${DESTDIR}${CABUNDLE}"
-    echo "Added to GnuTLS certificate bundle."
-
-    # Add to Java keystore (JKS)
-    if test "${WITH_JAVA}" == "1"; then
-      # Remove certificate if it already exists
-      "${KEYTOOL}" -delete -noprompt -alias "${certname}"        \
-                   -keystore "${DESTDIR}${KEYSTORE}/cacerts.jks" \
-                   -storepass 'changeit' 2>&1> /dev/null
-      # Import it
-      "${KEYTOOL}" -importcert -file "${TEMPDIR}/ssl/certs/${keyhash}.pem" \
-                   -noprompt -alias "${certname}" -storetype JKS           \
-                   -keystore "${DESTDIR}${KEYSTORE}/cacerts.jks"           \
-                   -storepass 'changeit' 2>&1> /dev/null |        \
-      sed -e 's@Certificate was a@A@' -e 's@keystore@Java (JKS) keystore.@'
-    fi
-  fi
-  if test "${smtrust}x" == "Cx"; then
-    echo ""
-    echo "${certname}" | sed 's@Alias:@Certificate: @'
-    echo "Keyhash:      ${keyhash}"
-
-    # Append to the s-mime bundle
-    "${OPENSSL}" x509 -in "${cert}" -text -fingerprint \
-         > "${TEMPDIR}/ssl/certs/${keyhash}.pem"
-    cat "${TEMPDIR}/ssl/certs/${keyhash}.pem" >> "${DESTDIR}${SMBUNDLE}"
-    echo "Added to s-mime certificate bundle."
-  fi
-  if test "${cstrust}x" == "Cx"; then
-    echo ""
-    echo "${certname}" | sed 's@Alias:@Certificate: @'
-    echo "Keyhash:      ${keyhash}"
-
-    # Append to the code signing bundle
-    "${OPENSSL}" x509 -in "${cert}" -text -fingerprint \
-         > "${TEMPDIR}/ssl/certs/${keyhash}.pem"
-    cat "${TEMPDIR}/ssl/certs/${keyhash}.pem" >> "${DESTDIR}${CSBUNDLE}"
-    echo "Added to code signing certificate bundle."
-  fi
-done
-
-"${OPENSSL}" rehash "${DESTDIR}${CERTDIR}" 2>&1>/dev/null
-popd > /dev/null
-
 # Install certdata.txt
 if test "${REBUILD}" == "0"; then
+  install -vdm755 "${DESTDIR}${SSLDIR}"
   install -m644 "${WORKDIR}/certdata.txt" "${DESTDIR}${SSLDIR}/certdata.txt"
 fi
 
 # Clean up the mess
 rm -rf "${TEMPDIR}"
+
+# Build alternate formats using p11-kit trust (if not using DESTDIR)
+if test "x${DESTDIR}" == "x"; then
+  echo -n "Extracting OpenSSL certificates to ${CERTDIR}..."
+  "${TRUST}" extract --filter=certificates --format=openssl-directory \
+                     --overwrite --comment "${CERTDIR}" \
+                     && echo "Done!" || echo "Failed!!!"
+  echo -n "Extracting GNUTLS sever auth certificates to ${CABUNDLE}..."
+  "${TRUST}" extract --filter=ca-anchors --format=pem-bundle \
+                     --purpose server-auth --overwrite --comment "${CABUNDLE}" \
+                     && echo "Done!" || echo "Failed!!!"
+  echo -n "Extracting GNUTLS S-Mime certificates to ${SMBUNDLE}..."
+  "${TRUST}" extract --filter=ca-anchors --format=pem-bundle \
+                     --purpose email --overwrite --comment "${SMBUNDLE}" \
+                     && echo "Done!" || echo "Failed!!!"
+  echo -n "Extracting GNUTLS code signing certificates to ${CSBUNDLE}..."
+  "${TRUST}" extract --filter=ca-anchors --format=pem-bundle \
+                     --purpose code-signing --overwrite --comment \
+                     "${CSBUNDLE}" && echo "Done!" || echo "Failed!!!"
+  echo -n "Extracting Java cacerts (JKS) to ${KEYSTORE}..."
+  "${TRUST}" extract --filter=ca-anchors --format=java-cacerts \
+                     --purpose server-auth --overwrite --comment "${KEYSTORE}" \
+                     && echo "Done!" || echo "Failed!!!"
+fi
 
 # End /usr/sbin/make-ca
