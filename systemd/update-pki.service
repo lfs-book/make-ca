@@ -2,7 +2,7 @@
 Description=Update PKI/TLS certificate store
 Documentation=man:make-ca(8)
 DefaultDependencies=no
-After=local-fs.target
+After=local-fs.target network-online.target
 Before=shutdown.target
 Wants=network-online.target
 
