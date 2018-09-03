@@ -527,6 +527,11 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
   "${tempfile}") | "${OPENSSL}" x509 -text -inform DER -fingerprint \
   > tempfile.crt
 
+  # Get individual values for certificates
+  certkey="$(${OPENSSL} x509 -in tempfile.crt -noout -pubkey)"
+  certcer="$(${OPENSSL} x509 -in tempfile.crt)"
+  certtxt="$(${OPENSSL} x509 -in tempfile.crt -noout -text)"
+
   # Get p11-kit label, oid, and values
   p11label="$(grep -m1 "Issuer" ${tempfile} | grep -o CN=.*$ | \
               cut -d ',' -f 1 | sed 's@CN=@@')"
@@ -662,6 +667,10 @@ if test -d "${LOCALDIR}"; then
     if test "${catrust}" == ""; then catrust=$(echo "${rejectlist}" | \
               grep "Client Auth" 2>&1> /dev/null && echo "p"); fi
 
+    # Get individual values for certificates
+    certkey="$(${OPENSSL} x509 -in ${cert} -noout -pubkey)"
+    certcer="$(${OPENSSL} x509 -in ${cert})"
+    certtxt="$(${OPENSSL} x509 -in ${cert} -noout -text)"
 
     # Place certificate into trust anchors dir
     p11label="$(grep -m1 "Issuer" ${cert} | grep -o CN=.*$ | \

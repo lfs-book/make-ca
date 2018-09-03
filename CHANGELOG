@@ -6,6 +6,8 @@
            certificate stores - only the trust store and NSSDB are distributed
          - Added "Wants=network-online.target" to update-pki.service - Thanks to
            Brendan L for the fix
+         - No longer generate Java p12 format cacerts
+         - Create Redhat compatibility link for external programs to PEM bundle
 0.8      - Use 'openssl rehash' instead of c-rehash script
 0.7      - Generate both PKCS#12 and JKS stores for Java
          - Local certs keep out of band trust when copied to system certs
