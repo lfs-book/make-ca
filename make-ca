@@ -488,6 +488,11 @@ fi
 cat "${CERTDATA}" >> "${WORKDIR}/certdata.txt"
 pushd "${WORKDIR}" > /dev/null
 
+if test "${WITH_NSS}" == "1"; then
+  # Create a blank NSS DB
+  "${CERTUTIL}" -N --empty-password -d "sql:${TEMPDIR}/pki/nssdb"
+fi
+
 # Get a list of starting lines for each cert
 CERTBEGINLIST=`grep -n "^# Certificate" "${WORKDIR}/certdata.txt" | \
                       cut -d ":" -f1`
