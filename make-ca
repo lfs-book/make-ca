@@ -305,7 +305,7 @@ function showhelp(){
   echo "                         \$SSLDIR/java/cacerts.p12 unless modified by"
   echo "                         the '-j/--javacerts' switch"
   echo ""
-  echo "        -n, --nssdb [\$PKIDIR/nssdb]"
+  echo "        -n, --nssdb {\$PKIDIR/nssdb}"
   echo "                         The output path for the shared NSS DB"
   echo ""
   echo "        -p, --proxy [URI:PORT]"
