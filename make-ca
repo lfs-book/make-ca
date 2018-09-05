@@ -699,10 +699,9 @@ fi
 
 # Install Java cacerts.p12 in ${KEYSTORE}
 if test "${WITH_P12}" == "1"; then
-  test -f "${DESTDIR}${KEYSTORE}/cacerts.p12" &&
-          rm -f "${DESTDIR}${KEYSTORE}/cacerts.p12"
-  install -dm755 "${DESTDIR}${KEYSTORE}"
-  install -m644 "${TEMPDIR}/ssl/java/cacerts.p12" "${DESTDIR}${KEYSTORE}"
+  test -f "${DESTDIR}${KEYSTORE}.p12" &&
+          rm -f "${DESTDIR}${KEYSTORE}.p12"
+  install -dm644 "${TEMPDIR}/ssl/java/cacerts.p12" "${DESTDIR}${KEYSTORE}.p12"
 fi
 
 # Import any certs in $LOCALDIR
@@ -879,7 +878,7 @@ if test "x${DESTDIR}" == "x"; then
   "${TRUST}" extract --filter=certificates --format=openssl-directory \
                      --overwrite --comment "${CERTDIR}" \
                      && echo "Done!" || echo "Failed!!!"
-  echo -n "Extracting GNUTLS sever auth certificates to ${CABUNDLE}..."
+  echo -n "Extracting GNUTLS server auth certificates to ${CABUNDLE}..."
   "${TRUST}" extract --filter=ca-anchors --format=pem-bundle \
                      --purpose server-auth --overwrite --comment "${CABUNDLE}" \
                      && echo "Done!" || echo "Failed!!!"
