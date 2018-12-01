@@ -8,7 +8,7 @@
 # Authors: DJ Lucas
 #          Bruce Dubbs
 
-VERSION="0.9"
+VERSION="1.0"
 
 # Get/set defaults
 if test -f /etc/make-ca.conf; then
@@ -22,11 +22,12 @@ else
     OPENSSL="/usr/bin/openssl"
     TRUST="/usr/bin/trust"
     ANCHORDIR="${PKIDIR}/anchors"
-    CABUNDLE="${SSLDIR}/ca-bundle.crt"
-    SMBUNDLE="${SSLDIR}/email-ca-bundle.crt"
-    CSBUNDLE="${SSLDIR}/objsign-ca-bundle.crt"
+    BUNDLEDIR="${PKIDIR}/tls/certs"
+    CABUNDLE="${BUNDLEDIR}/ca-bundle.crt"
+    SMBUNDLE="${BUNDLEDIR}/email-ca-bundle.crt"
+    CSBUNDLE="${BUNDLEDIR}/objsign-ca-bundle.crt"
     CERTDIR="${SSLDIR}/certs"
-    KEYSTORE="${SSLDIR}/java/cacerts"
+    KEYSTORE="${PKIDIR}/tls/java"
     NSSDB="${PKIDIR}/nssdb"
     LOCALDIR="${SSLDIR}/local"
     DESTDIR=""
@@ -97,16 +98,11 @@ function get_args(){
       -S | --ssldir)
         check_arg $1 $2
         SSLDIR="${2}"
-        CABUNDLE="${SSLDIR}/ca-bundle.crt"
         CERTDIR="${SSLDIR}/certs"
-        KEYSTORE="${SSLDIR}/java/cacerts"
         LOCALDIR="${SSLDIR}/local"
-        echo "${@}" | grep -e "-c " -e "--cafile" \
-                           -e "-d " -e "--cadir"  \
-                           -e "-j " -e "--javacerts" > /dev/null
+        echo "${@}" | grep -e "-d " -e "--cadir" 2>&1> /dev/null
         if test "${?}" == "0"; then
-          echo "Error! ${1} cannot be used with the -c/--cafile, -d/--cadir, or"
-          echo "-j/--javacerts switches."
+          echo "Error! ${1} cannot be used with the -d/--cadir switch."
           echo ""
           exit 3
         fi
@@ -116,7 +112,7 @@ function get_args(){
       -a | --anchordir)
         check_arg $1 $2
         ANCHORDIR="${2}"
-        echo "${@}" | grep -e "-P " -e "--pkidir" > /dev/null
+        echo "${@}" | grep -e "-P " -e "--pkidir" 2>&1> /dev/null
         if test "${?}" == "0"; then
           echo "Error! ${1} cannot be used with the -P/--pkidir switch."
           echo ""
@@ -124,20 +120,15 @@ function get_args(){
         fi
         shift 2
       ;;
-      -c | --cafile)
+      -b | --bundledir)
         check_arg $1 $2
-        CABUNDLE="${2}"
-        echo "${@}" | grep -e "-S " -e "--ssldir" > /dev/null
-        if test "${?}" == "0"; then
-          echo "Error! ${1} cannot be used with the -S/--ssldir switch."
-          echo ""
-          exit 3
-        fi
+        BUNDLEDIR="${2}"
         shift 2
       ;;
       -d | --cadir)
         check_arg $1 $2
         CADIR="${2}"
+        echo "$@" |  grep -e "-S" -e "--ssldir" 2>&1 > /dev/null
         if test "${?}" == "0"; then
           echo "Error! ${1} cannot be used with the -S/--ssldir switch."
           echo ""
@@ -158,11 +149,6 @@ function get_args(){
       -j | --javacerts)
         check_arg $1 $2
         KEYSTORE="${2}"
-        if test "${?}" == "0"; then
-          echo "Error! ${1} cannot be used with the -S/--ssldir switch."
-          echo ""
-          exit 3
-        fi
         shift 2
       ;;
       -k | --keytool)
@@ -277,32 +263,31 @@ function showhelp(){
   echo ""
   echo "        -S, --ssldir [/etc/ssl]"
   echo "                         The output SSL root direcotry - Cannot be used"
-  echo "                         with the -c / --cafile, -d / --cadir, or"
-  echo "                         -j / --javacerts switches"
+  echo "                         with the -d / --cadir switch"
   echo ""
   echo "        -a, --anchordir [\$PKIDIR/anchors]"
   echo "                         The output directory for OpenSSL trusted"
   echo "                         CA certificates used as trust anchors"
   echo ""
-  echo "        -c, --cafile [\$SSLDIR/ca-bundle.crt]"
-  echo "                         The output filename for the PEM formated bundle"
+  echo "        -b, --bundledir [\$PKIDIR/certs]"
+  echo "                         The output direcotry for the PEM formated bundles"
   echo ""
   echo "        -d, --cadir [\$SSLDIR/certs]"
   echo "                         The output directory for the OpenSSL trusted"
   echo "                         CA certificates"
   echo ""
-  echo "        -j, --javacerts [\$SSLDIR/java/cacerts]"
-  echo "                         The output filename for the Java cacerts file"
+  echo "        -j, --javacerts [\$PKIDIR/java/cacerts]"
+  echo "                         The output directory for the Java cacerts file(s)"
   echo ""
   echo "        -l, --localdir [\$SSLDIR/local]"
   echo "                         The path to a local set of OpenSSL trusted"
   echo "                         certificates, used to both override trust bits"
-  echo "                         from upstream sources and provide locally"
-  echo "                         provided certifiates"
+  echo "                         from upstream sources and provide system local"
+  echo "                         certifiates"
   echo ""
   echo "        -m, --java-p12"
   echo "                         Export Java PKCS#12 store - will default to"
-  echo "                         \$SSLDIR/java/cacerts.p12 unless modified by"
+  echo "                         \$PKIDIR/java/cacerts.p12 unless modified by"
   echo "                         the '-j/--javacerts' switch"
   echo ""
   echo "        -n, --nssdb {\$PKIDIR/nssdb}"
@@ -699,9 +684,10 @@ fi
 
 # Install Java cacerts.p12 in ${KEYSTORE}
 if test "${WITH_P12}" == "1"; then
-  test -f "${DESTDIR}${KEYSTORE}.p12" &&
-          rm -f "${DESTDIR}${KEYSTORE}.p12"
-  install -dm644 "${TEMPDIR}/ssl/java/cacerts.p12" "${DESTDIR}${KEYSTORE}.p12"
+  test -f "${DESTDIR}${KEYSTORE}/cacerts.p12" &&
+          rm -f "${DESTDIR}${KEYSTORE}/cacerts.p12"
+  install -dm644 "${TEMPDIR}/ssl/java/cacerts.p12" \
+                 "${DESTDIR}${KEYSTORE}/cacerts.p12"
 fi
 
 # Import any certs in $LOCALDIR
@@ -873,7 +859,7 @@ rm -rf "${TEMPDIR}"
 
 # Build alternate formats using p11-kit trust (if not using DESTDIR)
 if test "x${DESTDIR}" == "x"; then
-  mkdir -p /etc/ssl/{certs,java}
+  mkdir -p "${BUNDLEDIR}" "${KEYSTORE}"
   echo -n "Extracting OpenSSL certificates to ${CERTDIR}..."
   "${TRUST}" extract --filter=certificates --format=openssl-directory \
                      --overwrite --comment "${CERTDIR}" \
@@ -890,12 +876,11 @@ if test "x${DESTDIR}" == "x"; then
   "${TRUST}" extract --filter=ca-anchors --format=pem-bundle \
                      --purpose code-signing --overwrite --comment \
                      "${CSBUNDLE}" && echo "Done!" || echo "Failed!!!"
-  echo -n "Extracting Java cacerts (JKS) to ${KEYSTORE}..."
+  echo -n "Extracting Java cacerts (JKS) to ${KEYSTORE}/cacerts..."
   "${TRUST}" extract --filter=ca-anchors --format=java-cacerts \
-                     --purpose server-auth --overwrite --comment "${KEYSTORE}" \
+                     --purpose server-auth --overwrite \
+                     --comment "${KEYSTORE}/cacerts" \
                      && echo "Done!" || echo "Failed!!!"
-  # Remove compatibility symlink for 0.8 at 0.10
-  ln -sf cacerts "${KEYSTORE}.jks"
 fi
 
 # End /usr/sbin/make-ca
