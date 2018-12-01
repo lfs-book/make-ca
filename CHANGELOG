@@ -1,7 +1,9 @@
 1.0      - Move bundle defaults to /etc/pki/tls/{certs,java}/
          - Fix invalid test cases on command line processing
          - Remove -c/--cadir flags, replace with -b/--bundledir to store
-           all bundles in same location 
+           all bundles in same location
+         - Perform system installation of update service files
+         - Separate installation step for other consumers
 0.9      - Use P11-Kit trust module to generate alternate certificate stores
            from trust policy
          - Only generate the trust store (and optionally NSSDB and Java PKCS#12)
