@@ -1,5 +1,6 @@
 MANDIR=/usr/share/man
 SBINDIR=/usr/sbin
+ETCDIR=/etc
 
 all: make_ca man
 
@@ -19,10 +20,10 @@ clean_man:
 	rm -f make-ca.8
 	chmod 0644 help2man
 
-install: all install_bin install_man install_systemd
+install: all install_bin install_man install_systemd install_conf
 
 install_bin:
-	/usr/bin/install -vdm755 $(DESTDIR)$(SBINDIR)
+	install -vdm755 $(DESTDIR)$(SBINDIR)
 	install -vm755 make-ca $(DESTDIR)$(SBINDIR)
 
 install_systemd:
@@ -35,8 +36,12 @@ install_systemd:
 	fi
 
 install_man:
-	/usr/bin/install -vdm755 $(DESTDIR)$(MANDIR)/man8
+	install -vdm755 $(DESTDIR)$(MANDIR)/man8
 	install -vm644 make-ca.8 $(DESTDIR)$(MANDIR)/man8
+
+install_conf:
+	install -vdm755 $(DESTDIR)$(ETCDIR)
+	install -vm644 make-ca.conf.dist $(DESTDIR)$(ETCDIR)
 
 uninstall:
 	rm -f $(DESTDIR)$(SBINDIR)/make-ca
