@@ -1,4 +1,4 @@
-1.0      - Move bundle defaults to /etc/pki/tls/certs/
+1.0      - Move bundle defaults to /etc/pki/tls/{certs,java}/
          - Fix invalid test cases on command line processing
          - Remove -c/--cadir flags, replace with -b/--bundledir to store
            all bundles in same location 
