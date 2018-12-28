@@ -36,3 +36,49 @@ particular use, replace the -addtrust flag with the -addreject flag.
 Local trust overrides are handled entirely using the /etc/ssl/local directory.
 To override Mozilla's trust values, simply make a copy of the certificate in
 the local directory with alternate trust values.
+
+Additionally, for the p11-kit distro hook, remove the "not configured" and
+"exit 1" lines from trust/trust-extract-compat.in, and add the following
+commands:
+
+===============================================================================
+# Use make-ca to manage certificates
+if [ -f /etc/make-ca.conf ]; then
+    . /etc/make-ca.conf
+else
+    #Use defaults if make-ca.conf does not exist
+    ANCHORDIR="/etc/pki/anchors"
+    ANCHORLIST="/etc/pki/anchors.txt"
+    LOCALDIR="/etc/ssl/local"
+    CERTLIST=""
+fi
+
+# Create a list of certificates not present at previous run
+for ca in `/bin/ls -1 --color=none "${ANCHORDIR}"` ; do
+    /bin/grep "${ca}" "${ANCHORLIST}" 2>&1>/dev/null || \
+        CERTLIST="${CERTLIST} ${ca}"
+done
+
+# Dump to a temporary directory
+TEMPDIR=`mktemp -d`
+/usr/bin/trust extract --filter=certificates --format=openssl-directory \
+                       --overwrite "${TEMPDIR}"
+
+# Copy new certificates to LOCALDIR
+for certificate in `echo "${CERTLIST}"` ; do
+    LABEL=`/bin/grep -m 1 "label:" "${ANCHORDIR}/${certificate}"`
+    LABELNEW=`echo "${LABEL}" | \
+                   /bin/sed -e 's@^label: @@' -e 's@"@@g' -e 's@ @_@g'`
+    cp -v "${TEMPDIR}/${LABELNEW}.pem" "${LOCALDIR}"
+    unset LABEL LABELNEW
+done
+
+# Clean up
+rm -rf "${TEMPDIR}"
+unset ANCHORDIR ANCHORLIST LOCALDIR CERTLIST TEMPDIR
+
+# Generate a new trust store
+/usr/sbin/make-ca -f
+EOF
+===============================================================================
+

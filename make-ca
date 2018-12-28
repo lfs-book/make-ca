@@ -24,6 +24,7 @@ else
     OPENSSL="/usr/bin/openssl"
     TRUST="/usr/bin/trust"
     ANCHORDIR="${PKIDIR}/anchors"
+    ANCHORLIST="${PKIDIR}/anchors.txt"
     BUNDLEDIR="${PKIDIR}/tls/certs"
     CABUNDLE="${BUNDLEDIR}/ca-bundle.crt"
     SMBUNDLE="${BUNDLEDIR}/email-ca-bundle.crt"
@@ -847,6 +848,9 @@ fi
 
 # Clean up the mess
 rm -rf "${TEMPDIR}"
+
+# Build ANCHORLIST
+/bin/ls -1 --color=none "${ANCHORDIR}" > "${ANCHORLIST}"
 
 # Build alternate formats using p11-kit trust (if not using DESTDIR)
 if test "x${DESTDIR}" == "x"; then
