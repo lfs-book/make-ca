@@ -426,6 +426,70 @@ function get_p11_label() {
     fi
 }
 
+function get_trust_values() {
+  # Determine certificate trust values for SSL/TLS, S/MIME, and Code Signing
+  satrust="$(convert_trust `grep '^CKA_TRUST_SERVER_AUTH' ${1} | \
+                  cut -d " " -f 3`)"
+  smtrust="$(convert_trust `grep '^CKA_TRUST_EMAIL_PROTECTION' ${1} | \
+                  cut -d " " -f 3`)"
+  cstrust="$(convert_trust `grep '^CKA_TRUST_CODE_SIGNING' ${1} | \
+                  cut -d " " -f 3`)"
+  # Not currently included in NSS certdata.txt
+  #catrust="$(convert_trust `grep '^CKA_TRUST_CLIENT_AUTH' ${1} | \
+  #                cut -d " " -f 3`)"
+
+  # Get args for OpenSSL trust settings
+  saarg="$(convert_trust_arg "${satrust}" sa)"
+  smarg="$(convert_trust_arg "${smtrust}" sm)"
+  csarg="$(convert_trust_arg "${cstrust}" cs)"
+  # Not currently included in NSS certdata.txt
+  #caarg="$(convert_trust_arg "${catrust}" ca)"
+}
+
+function get_p11_trust() {
+  # if distrusted at all, x-distrusted
+  if test "${satrust}" == "p" -o "${smtrust}" == "p" -o "${cstrust}" == "p"
+  then
+      # if any distrusted, x-distrusted
+      p11trust="x-distrusted: true"
+      p11oid="1.3.6.1.4.1.3319.6.10.1"
+      p11value="0.%06%0a%2b%06%01%04%01%99w%06%0a%01%04 0%1e%06%08%2b%06%01%05%05%07%03%04%06%08%2b%06%01%05%05%07%03%01%06%08%2b%06%01%05%05%07%03%03"
+  else
+      p11trust="trusted: true"
+      p11oid="2.5.29.37"
+      trustp11="p11"
+      if test "${satrust}" == "C"; then
+          trustp11="${trustp11}sa"
+      fi
+      if test "${smtrust}" == "C"; then
+          trustp11="${trustp11}sm"
+      fi
+      if test "${cstrust}" == "C"; then
+          trustp11="${trustp11}cs"
+      fi
+      get-p11-val "${trustp11}"
+  fi
+
+}
+
+function write_anchor() {
+  echo "[p11-kit-object-v1]" >> "${anchorfile}"
+  echo "label: \"${p11label}\"" >> "${anchorfile}"
+  echo "class: x-certificate-extension" >> "${anchorfile}"
+  echo "object-id: ${p11oid}" >> "${anchorfile}"
+  echo "value: \"${p11value}\"" >> "${anchorfile}"
+  echo "modifiable: false" >> "${anchorfile}"
+  echo "${certkey}" >> "${anchorfile}"
+  echo "" >> "${anchorfile}"
+  echo "[p11-kit-object-v1]" >> "${anchorfile}"
+  echo "label: \"${p11label}\"" >> "${anchorfile}"
+  echo "${p11trust}" >> "${anchorfile}"
+  echo "nss-mozilla-ca-policy: ${moz_trust}" >> "${anchorfile}"
+  echo "modifiable: false" >> "${anchorfile}"
+  echo "${certcer}" >> "${anchorfile}"
+  echo "${certtxt}" | sed 's@^@#@' >> "${anchorfile}"
+}
+
 # Process command line arguments
 get_args $@
 
@@ -538,23 +602,7 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
   # Get a name for the cert
   certname="$(grep "^# Certificate" "${tempfile}" | cut -d '"' -f 2)"
 
-  # Determine certificate trust values for SSL/TLS, S/MIME, and Code Signing
-  satrust="$(convert_trust `grep '^CKA_TRUST_SERVER_AUTH' ${tempfile} | \
-                  cut -d " " -f 3`)"
-  smtrust="$(convert_trust `grep '^CKA_TRUST_EMAIL_PROTECTION' ${tempfile} | \
-                  cut -d " " -f 3`)"
-  cstrust="$(convert_trust `grep '^CKA_TRUST_CODE_SIGNING' ${tempfile} | \
-                  cut -d " " -f 3`)"
-  # Not currently included in NSS certdata.txt
-  #catrust="$(convert_trust `grep '^CKA_TRUST_CLIENT_AUTH' ${tempfile} | \
-  #                cut -d " " -f 3`)"
-
-  # Get args for OpenSSL trust settings
-  saarg="$(convert_trust_arg "${satrust}" sa)"
-  smarg="$(convert_trust_arg "${smtrust}" sm)"
-  csarg="$(convert_trust_arg "${cstrust}" cs)"
-  # Not currently included in NSS certdata.txt
-  #caarg="$(convert_trust_arg "${catrust}" ca)"
+  get_trust_values "${tempfile}"
 
   # Convert to a PEM formated certificate
   printf $(awk '/^CKA_VALUE/{flag=1;next}/^END/{flag=0}flag{printf $0}' \
@@ -569,28 +617,8 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
   # Get p11-kit label, oid, and values
   get_p11_label "${tempfile}"
 
-  # if distrusted at all, x-distrusted
-  if test "${satrust}" == "p" -o "${smtrust}" == "p" -o "${cstrust}" == "p"
-  then
-      # if any distrusted, x-distrusted
-      p11trust="x-distrusted: true"
-      p11oid="1.3.6.1.4.1.3319.6.10.1"
-      p11value="0.%06%0a%2b%06%01%04%01%99w%06%0a%01%04 0%1e%06%08%2b%06%01%05%05%07%03%04%06%08%2b%06%01%05%05%07%03%01%06%08%2b%06%01%05%05%07%03%03"
-  else
-      p11trust="trusted: true"
-      p11oid="2.5.29.37"
-      trustp11="p11"
-      if test "${satrust}" == "C"; then
-          trustp11="${trustp11}sa"
-      fi
-      if test "${smtrust}" == "C"; then
-          trustp11="${trustp11}sm"
-      fi
-      if test "${cstrust}" == "C"; then
-          trustp11="${trustp11}cs"
-      fi
-      get-p11-val "${trustp11}"
-  fi
+  # Get p11 trust and OID values
+  get_p11_trust
 
   # Get a hash for the cert
   keyhash=$("${OPENSSL}" x509 -noout -in tempfile.crt -hash)
@@ -601,21 +629,8 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
 
   # Place certificate into trust anchors dir
   anchorfile="${TEMPDIR}/pki/anchors/${keyhash}.pem"
-  echo "[p11-kit-object-v1]" >> "${anchorfile}"
-  echo "label: \"${p11label}\"" >> "${anchorfile}"
-  echo "class: x-certificate-extension" >> "${anchorfile}"
-  echo "object-id: ${p11oid}" >> "${anchorfile}"
-  echo "value: \"${p11value}\"" >> "${anchorfile}"
-  echo "modifiable: false" >> "${anchorfile}"
-  echo "${certkey}" >> "${anchorfile}"
-  echo "" >> "${anchorfile}"
-  echo "[p11-kit-object-v1]" >> "${anchorfile}"
-  echo "label: \"${p11label}\"" >> "${anchorfile}"
-  echo "${p11trust}" >> "${anchorfile}"
-  echo "nss-mozilla-ca-policy: true" >> "${anchorfile}"
-  echo "modifiable: false" >> "${anchorfile}"
-  echo "${certcer}" >> "${anchorfile}"
-  echo "${certtxt}" | sed 's@^@#@' >> "${anchorfile}"
+  moz_trust="true"
+  write_anchor
   echo "Added to p11-kit anchor directory with trust '${satrust},${smtrust},${cstrust}'."
 
   # Import all certificates with trust args to the temporary NSS DB
@@ -755,45 +770,13 @@ if test -d "${LOCALDIR}"; then
     # Place certificate into trust anchors dir
     get_p11_label "${cert}"
 
-    # if distrusted at all, x-distrusted
-    if test "${satrust}" == "p" -o "${smtrust}" == "p" -o "${cstrust}" == "p"
-    then
-        # if any distrusted, x-distrusted
-        p11trust="x-distrusted: true"
-        p11oid="1.3.6.1.4.1.3319.6.10.1"
-        p11value="0.%06%0a%2b%06%01%04%01%99w%06%0a%01%04 0%1e%06%08%2b%06%01%05%05%07%03%04%06%08%2b%06%01%05%05%07%03%01%06%08%2b%06%01%05%05%07%03%03"
-    else
-        p11trust="trusted: true"
-        p11oid="2.5.29.37"
-        trustp11="p11"
-        if test "${satrust}" == "C"; then
-            trustp11="${trustp11}sa"
-        fi
-        if test "${smtrust}" == "C"; then
-            trustp11="${trustp11}sm"
-        fi
-        if test "${cstrust}" == "C"; then
-            trustp11="${trustp11}cs"
-        fi
-        get-p11-val "${trustp11}"
-    fi
+    # Get p11 trust and OID values
+    get_p11_trust
 
+    # Place certificate into trust anchors dir
     anchorfile="${DESTDIR}${ANCHORDIR}/${keyhash}.pem"
-
-    echo "[p11-kit-object-v1]" >> "${anchorfile}"
-    echo "label: \"${p11label}\"" >> "${anchorfile}"
-    echo "class: x-certificate-extension" >> "${anchorfile}"
-    echo "object-id: ${p11oid}" >> "${anchorfile}"
-    echo "value: \"${p11value}\"" >> "${anchorfile}"
-    echo "modifiable: false" >> "${anchorfile}"
-    echo "${certkey}" >> "${anchorfile}"
-    echo "" >> "${anchorfile}"
-    echo "[p11-kit-object-v1]" >> "${anchorfile}"
-    echo "label: \"${p11label}\"" >> "${anchorfile}"
-    echo "${p11trust}" >> "${anchorfile}"
-    echo "modifiable: false" >> "${anchorfile}"
-    echo "${certcer}" >> "${anchorfile}"
-    echo "${certtxt}" | sed 's@^@#@' >> "${anchorfile}"
+    moz_trust="false"
+    write_anchor
     echo "Added to p11-kit anchor directory with trust '${satrust},${smtrust},${cstrust}'."
 
     # Add to Shared NSS DB
