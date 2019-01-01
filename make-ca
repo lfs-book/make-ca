@@ -21,6 +21,7 @@ else
     SSLDIR="/etc/ssl"
     CERTUTIL="/usr/bin/certutil"
     KEYTOOL="${JAVA_HOME}/bin/keytool"
+    MD5SUM="/usr/bin/md5sum"
     OPENSSL="/usr/bin/openssl"
     TRUST="/usr/bin/trust"
     ANCHORDIR="${PKIDIR}/anchors"
@@ -372,7 +373,7 @@ function convert_trust_arg(){
 }
     
 # Define p11-kit ext value constants (see p11-kit API documentation)
-get-p11-val() {
+function get-p11-val() {
   case $1 in
     p11sasmcs)
       p11value="0%2a%06%03U%1d%25%01%01%ff%04 0%1e%06%08%2b%06%01%05%05%07%03%04%06%08%2b%06%01%05%05%07%03%01%06%08%2b%06%01%05%05%07%03%03"
@@ -406,6 +407,23 @@ get-p11-val() {
       p11value="0%18%06%03U%1d%25%01%01%ff%04%0e0%0c%06%0a%2b%06%01%04%01%99w%06%0a%10"
     ;;
   esac
+}
+
+function get_p11_label() {
+    p11label="$(grep -m1 "Issuer" ${1} | grep -o CN=.*$ | \
+                cut -d ',' -f 1 | sed 's@CN=@@')"
+
+    # Fallback to the OU value if CN does not exeist in Issuer string
+    if [ "${p11label}" == "" ]; then
+        p11label="$(grep -m1 "Issuer" ${1} | grep -o "OU=.*$" | \
+                    cut -d ',' -f 1 | sed 's@OU=@@')"
+
+        # If still empty, fall back to Object value as a last resort
+        if [ "${p11label}" == "" ]; then
+            p11label="$(grep -m1 "Issuer" ${1} | grep -o "O=.*$" | \
+                        cut -d ',' -f 1 | sed 's@O=@@')"
+        fi
+    fi
 }
 
 # Process command line arguments
@@ -549,8 +567,7 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
   certtxt="$(${OPENSSL} x509 -in tempfile.crt -noout -text)"
 
   # Get p11-kit label, oid, and values
-  p11label="$(grep -m1 "Issuer" ${tempfile} | grep -o CN=.*$ | \
-              cut -d ',' -f 1 | sed 's@CN=@@')"
+  get_p11_label "${tempfile}"
 
   # if distrusted at all, x-distrusted
   if test "${satrust}" == "p" -o "${smtrust}" == "p" -o "${cstrust}" == "p"
@@ -736,8 +753,7 @@ if test -d "${LOCALDIR}"; then
     certtxt="$(${OPENSSL} x509 -in ${cert} -noout -text)"
 
     # Place certificate into trust anchors dir
-    p11label="$(grep -m1 "Issuer" ${cert} | grep -o CN=.*$ | \
-                cut -d ',' -f 1 | sed 's@CN=@@')"
+    get_p11_label "${cert}"
 
     # if distrusted at all, x-distrusted
     if test "${satrust}" == "p" -o "${smtrust}" == "p" -o "${cstrust}" == "p"
@@ -850,7 +866,7 @@ fi
 rm -rf "${TEMPDIR}"
 
 # Build ANCHORLIST
-/bin/ls -1 --color=none "${ANCHORDIR}" > "${ANCHORLIST}"
+"${MD5SUM}" "${ANCHORDIR}"/*.pem > "${ANCHORLIST}"
 
 # Build alternate formats using p11-kit trust (if not using DESTDIR)
 if test "x${DESTDIR}" == "x"; then
