@@ -3,6 +3,8 @@
          - Added get_trust_values(), get_p11_trust(), and write_anchor()
            functions to eliminate duplicate code
          - Fix certificate label in local certificates
+         - Changed default name of anchors list to use md5sums extension
+         - Added copy-trust-modifcations script for use by p11-kit
 1.1      - Add anchorlist for use by p11-kit to utilize LOCALDIR
 1.0      - Move bundle defaults to /etc/pki/tls/{certs,java}/
          - Fix invalid test cases on command line processing

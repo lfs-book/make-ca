@@ -25,7 +25,7 @@ else
     OPENSSL="/usr/bin/openssl"
     TRUST="/usr/bin/trust"
     ANCHORDIR="${PKIDIR}/anchors"
-    ANCHORLIST="${PKIDIR}/anchors.txt"
+    ANCHORLIST="${PKIDIR}/anchors.md5sums"
     BUNDLEDIR="${PKIDIR}/tls/certs"
     CABUNDLE="${BUNDLEDIR}/ca-bundle.crt"
     SMBUNDLE="${BUNDLEDIR}/email-ca-bundle.crt"

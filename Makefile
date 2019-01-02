@@ -1,6 +1,7 @@
 MANDIR=/usr/share/man
 SBINDIR=/usr/sbin
 ETCDIR=/etc
+LIBEXECDIR=/usr/libexec/make-ca
 
 all: make_ca man
 
@@ -25,6 +26,8 @@ install: all install_bin install_man install_systemd install_conf
 install_bin:
 	install -vdm755 $(DESTDIR)$(SBINDIR)
 	install -vm755 make-ca $(DESTDIR)$(SBINDIR)
+	install -vdm755 $(DESTDIR)$(LIBEXECDIR)
+	install -vm700 copy-trust-modifications $(DESTDIR)$(LIBEXECDIR)
 
 install_systemd:
 	if test -d /usr/lib/systemd/system; then \
