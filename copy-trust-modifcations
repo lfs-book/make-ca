@@ -19,12 +19,13 @@ TEMPDIR=`mktemp -d`
                        --overwrite \
                        "${TEMPDIR}"
 
-# Create a list of certificates not present at, or modified since previous run
+# Create a list of anchors that were not present or have been modified
 "${MD5SUM}" "${ANCHORDIR}"/*.pem > "${TEMPDIR}/anchors.md5sums"
 diff -au "${ANCHORLIST}" "${TEMPDIR}/anchors.md5sums" > "${TEMPDIR}/diff"
 grep "^+[a-z,0-9]" "${TEMPDIR}/diff" | cut -d " " -f 3 > "${TEMPDIR}/certlist"
 
 echo -e "\nThe following certificates have local modifications:\n"
+
 # Copy new certificates to LOCALDIR
 for certificate in `cat "${TEMPDIR}/certlist"` ; do
     LABEL=`grep -m 1 "label:" "${certificate}"`
