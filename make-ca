@@ -488,6 +488,7 @@ function write_anchor() {
   echo "modifiable: false" >> "${anchorfile}"
   echo "${certcer}" >> "${anchorfile}"
   echo "${certtxt}" | sed 's@^@#@' >> "${anchorfile}"
+  echo "Added to p11-kit anchor directory with trust '${satrust},${smtrust},${cstrust}'."
 }
 
 # Process command line arguments
@@ -631,7 +632,6 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
   anchorfile="${TEMPDIR}/pki/anchors/${keyhash}.pem"
   moz_trust="true"
   write_anchor
-  echo "Added to p11-kit anchor directory with trust '${satrust},${smtrust},${cstrust}'."
 
   # Import all certificates with trust args to the temporary NSS DB
   if test "${WITH_NSS}" == "1"; then
@@ -682,8 +682,8 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
   # Clean up the directory and environment as we go
   rm -f tempfile.crt
   unset keyhash subject count certname
-  unset trustlist rejectlist satrust smtrust cstrust catrust p11label anchrorfile
-  unset p11trust p11oid p11value trustp11
+  unset trustlist rejectlist satrust smtrust cstrust catrust
+  unset p11trust p11oid p11value trustp11 p11label anchrorfile moz_trust
 
   echo -e "\n"
 done
@@ -722,15 +722,10 @@ if test -d "${LOCALDIR}"; then
     # Get some information about the certificate
     keyhash=$("${OPENSSL}" x509 -noout -in "${cert}" -hash)
     subject=$("${OPENSSL}" x509 -noout -in "${cert}" -subject)
-    count=1
-    while test "${count}" -lt 10; do
-      echo "${subject}" | cut -d "/" -f "${count}" | grep "CN=" >/dev/null \
-           && break
-      let count++
-    done
-    certname=$(echo "${subject}" | cut -d "/" -f "${count}" | sed 's@CN=@@')
+    # This will always be OpenSSL, values will be separated by spaces
+    certlabel=$( echo "${subject}" | grep -o "CN = .*" | sed 's@CN = @@' | cut -d "," -f 1)
 
-    echo "Certificate:  ${certname}"
+    echo "Certificate:  ${certlabel}"
     echo "Keyhash:      ${keyhash}"
 
     # Get trust information
@@ -777,7 +772,6 @@ if test -d "${LOCALDIR}"; then
     anchorfile="${DESTDIR}${ANCHORDIR}/${keyhash}.pem"
     moz_trust="false"
     write_anchor
-    echo "Added to p11-kit anchor directory with trust '${satrust},${smtrust},${cstrust}'."
 
     # Add to Shared NSS DB
     if test "${WITH_NSS}" == "1"; then
@@ -831,8 +825,8 @@ if test -d "${LOCALDIR}"; then
     fi
 
     unset keyhash subject count certname
-    unset trustlist rejectlist satrust smtrust cstrust catrust p11label anchrorfile
-    unset p11trust p11oid p11value trustp11
+    unset trustlist rejectlist satrust smtrust cstrust catrust
+    unset p11trust p11oid p11value trustp11 p11label anchorfile moz_trust
     echo ""
 
   done
