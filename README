@@ -8,8 +8,28 @@ build, but has been written to be generic enough for any Linux distribution.
 The make-ca script will process the certificates included in the certdata.txt
 file for use in multiple certificate stores (if the associated applications are
 present on the system). Additionally, any local certificates stored in
-/etc/ssl/local will be imported to the certificate stores. Certificates in this
-directory should be stored as PEM encoded OpenSSL trusted certificates.
+/etc/ssl/local will be imported into the certificate stores. Certificates in
+this directory should be stored as PEM encoded OpenSSL trusted certificates.
+
+As of version 1.2, a p11-kit helper, copy-trust-modifications, is included
+for use in p11-kit's trust-extract-compat script (which should be symlinked
+to the user's path as update-ca-certificates). Manual creation of OpenSSL
+trusted certificates is no longer needed. Instead, import the certificate
+using p11-kit's trust utility, and recreate the individual stores using the
+update-ca-certificates script. A copy of any modified anchors will be placed
+into $LOCALDIR (in the correct format) by the p11-kit helper script.
+
+For the p11-kit distro hook, remove the "not configured" and "exit 1" lines
+from trust/trust-extract-compat.in, and append the following:
+===============================================================================
+# Copy existing modifications to local store
+/usr/libexec/make-ca/copy-trust-modifications
+
+# Generate a new trust store
+/usr/sbin/make-ca -f -g
+===============================================================================
+
+The manual instructions below have been left for reference.
 
 To create an OpenSSL trusted certificate from a regular PEM encoded file,
 provided by a CA not included in Mozilla's certificate distribution, you need
@@ -36,17 +56,3 @@ particular use, replace the -addtrust flag with the -addreject flag.
 Local trust overrides are handled entirely using the /etc/ssl/local directory.
 To override Mozilla's trust values, simply make a copy of the certificate in
 the local directory with alternate trust values.
-
-Additionally, for the p11-kit distro hook, remove the "not configured" and
-"exit 1" lines from trust/trust-extract-compat.in, and add the following
-commands:
-
-===============================================================================
-# Copy existing modifications to local store
-/usr/libexec/make-ca/copy-trust-modifications
-
-# Generate a new trust store
-/usr/sbin/make-ca -f -g
-EOF
-===============================================================================
-
