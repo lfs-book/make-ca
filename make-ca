@@ -9,7 +9,7 @@
 #          Bruce Dubbs
 #          Graham Weldon
 
-VERSION="1.0"
+VERSION="1.3"
 MAKE_CA_CONF="/etc/make-ca.conf"
 
 # Get/set defaults
@@ -410,23 +410,28 @@ function get-p11-val() {
 }
 
 function get_p11_label() {
-    p11label="$(grep -m1 "Issuer" ${1} | grep -o CN=.*$ | \
-                cut -d ',' -f 1 | sed 's@CN=@@')"
+  # $1 == individual nss certificate extracted from certdata.txt
+  #       or x509 certificate with OpenSSL text values
 
-    # Fallback to the OU value if CN does not exeist in Issuer string
-    if [ "${p11label}" == "" ]; then
-        p11label="$(grep -m1 "Issuer" ${1} | grep -o "OU=.*$" | \
-                    cut -d ',' -f 1 | sed 's@OU=@@')"
+  p11label="$(grep -m1 "Issuer" ${1} | grep -o CN=.*$ | \
+              cut -d ',' -f 1 | sed 's@CN=@@')"
 
-        # If still empty, fall back to Object value as a last resort
-        if [ "${p11label}" == "" ]; then
-            p11label="$(grep -m1 "Issuer" ${1} | grep -o "O=.*$" | \
+  # Fallback to the OU value if CN does not exeist in Issuer string
+  if [ "${p11label}" == "" ]; then
+      p11label="$(grep -m1 "Issuer" ${1} | grep -o "OU=.*$" | \
+                  cut -d ',' -f 1 | sed 's@OU=@@')"
+
+      # If still empty, fall back to Object value as a last resort
+      if [ "${p11label}" == "" ]; then
+          p11label="$(grep -m1 "Issuer" ${1} | grep -o "O=.*$" | \
                         cut -d ',' -f 1 | sed 's@O=@@')"
-        fi
-    fi
+      fi
+  fi
 }
 
 function get_trust_values() {
+  # $1 == indiviual certificate extracted from NSS certdata.txt
+
   # Determine certificate trust values for SSL/TLS, S/MIME, and Code Signing
   satrust="$(convert_trust `grep '^CKA_TRUST_SERVER_AUTH' ${1} | \
                   cut -d " " -f 3`)"
@@ -489,6 +494,56 @@ function write_anchor() {
   echo "${certcer}" >> "${anchorfile}"
   echo "${certtxt}" | sed 's@^@#@' >> "${anchorfile}"
   echo "Added to p11-kit anchor directory with trust '${satrust},${smtrust},${cstrust}'."
+}
+
+function write_nss_db() {
+  # $1 == NSS database
+  # $2 == x509 certificate in PEM format
+
+  "${CERTUTIL}" -d "sql:${1}" -A \
+                -t "${satrust},${smtrust},${cstrust}" \
+                -n "${certname}" -i "${2}"
+  echo "Added to NSS shared DB with trust '${satrust},${smtrust},${cstrust}'."
+}
+
+function write_java_p12() {
+  # $1 == cacerts.p12 file
+  # $2 == x509 certificate in PEM format
+
+  # Remove existing certificate
+  "${KEYTOOL}" -delete -noprompt -alias "${certname}"       \
+               -keystore "${1}"  \
+               -storepass 'changeit' 2>&1> /dev/null
+  # Determine ExtendedKeyUsage
+  EKU=""
+  EKUVAL=""
+  if test "${satrust}" == "C"; then EKU="serverAuth"; fi
+  if test "${smtrust}" == "C"; then
+    if test "${EKU}" == ""; then
+      EKU="clientAuth"
+    else
+      EKU="${EKU},clientAuth"
+    fi
+  fi
+  if test "${cstrust}" == "C"; then
+    if test "${EKU}" == ""; then
+      EKU="codeSigning"
+    else
+      EKU="${EKU},codeSigning"
+    fi
+  fi
+  if test "${EKU}" != ""; then
+    EKUVAL="-ext EKU=${EKU}"
+    "${KEYTOOL}" -importcert -file "${2}" -storetype PKCS12     \
+                 -noprompt -alias "${certname}" -storepass 'changeit' \
+                 -keystore "${1}" $EKUVAL  \
+                 2>&1> /dev/null | \
+    sed -e "s@Certificate was a@A@" \
+        -e 's@keystore@Java cacerts (PKCS#12) with trust '${satrust},${smtrust},${cstrust}'.@' \
+        | sed 's@p@@'
+    unset EKU
+    unset EKUVAL
+  fi
 }
 
 # Process command line arguments
@@ -635,48 +690,12 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
 
   # Import all certificates with trust args to the temporary NSS DB
   if test "${WITH_NSS}" == "1"; then
-    "${CERTUTIL}" -d "sql:${TEMPDIR}/pki/nssdb" -A \
-                  -t "${satrust},${smtrust},${cstrust}" \
-                  -n "${certname}" -i tempfile.crt
-    echo "Added to NSS shared DB with trust '${satrust},${smtrust},${cstrust}'."
+    write_nss_db ${TEMPDIR}/pki/nssdb tempfile.crt
   fi
 
   # Import all certificates with trust args to the java cacerts.p12 file
   if test "${WITH_P12}" == "1"; then
-    # Remove existing certificate
-    "${KEYTOOL}" -delete -noprompt -alias "${certname}"       \
-                 -keystore "${TEMPDIR}/ssl/java/cacerts.p12"  \
-                 -storepass 'changeit' 2>&1> /dev/null
-    # Determine ExtendedKeyUsage
-    EKU=""
-    EKUVAL=""
-    if test "${satrust}" == "C"; then EKU="serverAuth"; fi
-    if test "${smtrust}" == "C"; then
-      if test "${EKU}" == ""; then
-        EKU="clientAuth"
-      else
-        EKU="${EKU},clientAuth"
-      fi
-    fi
-    if test "${cstrust}" == "C"; then
-      if test "${EKU}" == ""; then
-        EKU="codeSigning"
-      else
-        EKU="${EKU},codeSigning"
-      fi
-    fi
-    if test "${EKU}" != ""; then
-      EKUVAL="-ext EKU=${EKU}"
-      "${KEYTOOL}" -importcert -file tempfile.crt -storetype PKCS12     \
-                   -noprompt -alias "${certname}" -storepass 'changeit' \
-                   -keystore "${TEMPDIR}/ssl/java/cacerts.p12" $EKUVAL  \
-                   2>&1> /dev/null | \
-      sed -e "s@Certificate was a@A@" \
-          -e 's@keystore@Java cacerts (PKCS#12) with trust '${satrust},${smtrust},${cstrust}'.@' \
-          | sed 's@p@@'
-      unset EKU
-      unset EKUVAL
-    fi
+    write_java_p12 "${TEMPDIR}/ssl/java/cacerts.p12" tempfile.crt
   fi
 
   # Clean up the directory and environment as we go
@@ -723,9 +742,9 @@ if test -d "${LOCALDIR}"; then
     keyhash=$("${OPENSSL}" x509 -noout -in "${cert}" -hash)
     subject=$("${OPENSSL}" x509 -noout -in "${cert}" -subject)
     # This will always be OpenSSL, values will be separated by spaces
-    certlabel=$( echo "${subject}" | grep -o "CN = .*" | sed 's@CN = @@' | cut -d "," -f 1)
+    certname=$( echo "${subject}" | grep -o "CN = .*" | sed 's@CN = @@' | cut -d "," -f 1)
 
-    echo "Certificate:  ${certlabel}"
+    echo "Certificate:  ${certname}"
     echo "Keyhash:      ${keyhash}"
 
     # Get trust information
@@ -773,55 +792,17 @@ if test -d "${LOCALDIR}"; then
     moz_trust="false"
     write_anchor
 
+    # Generate working copy
+    "${OPENSSL}" x509 -in "${cert}" -text -fingerprint > tempfile.crt
+
     # Add to Shared NSS DB
     if test "${WITH_NSS}" == "1"; then
-      "${OPENSSL}" x509 -in "${cert}" -text -fingerprint | \
-      "${CERTUTIL}" -d "sql:${DESTDIR}${NSSDB}" -A                   \
-                    -t "${satrust},${smtrust},${cstrust}"  \
-                    -n "${certname}"
-    echo "Added to NSS shared DB with trust '${satrust},${smtrust},${cstrust}'."
+      write_nss_db "${DESTDIR}${NSSDB}" tempfile.crt
     fi
 
     # Import certificate (with trust args) into the java cacerts.p12 file
     if test "${WITH_P12}" == "1"; then
-      # Remove existing certificate
-      "${KEYTOOL}" -delete -noprompt -alias "${certname}"         \
-                   -keystore "${DESTDIR}${KEYSTORE}/cacerts.p12"  \
-                   -storepass 'changeit' 2>&1> /dev/null
-      # Determing ExtendedKeyUsage
-      EKU=""
-      if test "${satrust}" == "C"; then EKU="serverAuth"; fi
-      if test "${catrust}" == "C"; then
-        if test "${EKU}" == ""; then
-          EKU="clientAuth"
-        else
-          EKU="${EKU},clientAuth"
-        fi
-      fi
-      if test "${cstrust}" == "C"; then
-        if test "${EKU}" == ""; then
-          EKU="codeSigning"
-        else
-          EKU="${EKU},codeSigning"
-        fi
-      fi
-      if test "${EKU}" != ""; then
-        EKUVAL="-ext EKU=${EKU}"
-        "${OPENSSL}" x509 -in "${cert}" -text -fingerprint                    \
-                     -setalias "${certname}" > "${TEMPDIR}/tempcert.pem"
-
-        "${KEYTOOL}" -importcert -noprompt -alias "${certname}"    \
-                     -keystore "${DESTDIR}${KEYSTORE}/cacerts.p12" \
-                     -storepass 'changeit' $EKUVAL                 \
-                     -file "${TEMPDIR}/tempcert.pem"               \
-                     2>&1> /dev/null | \
-        sed -e "s@Certificate was a@A@" \
-            -e 's@keystore@Java cacerts (PKCS#12) with trust '${satrust},${smtrust},${cstrust}'.@' \
-            | sed 's@p@@'
-        rm -f "${TEMPDIR}/tempcert.pem"
-        unset EKU
-        unset EKUVAL
-      fi
+      write_java_p12 "${DESTDIR}${KEYSTORE}/cacerts.p12" tempfile.crt
     fi
 
     unset keyhash subject count certname
@@ -840,6 +821,7 @@ if test "${REBUILD}" == "0"; then
 fi
 
 # Clean up the mess
+popd
 rm -rf "${TEMPDIR}"
 
 # Build ANCHORLIST

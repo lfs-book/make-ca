@@ -1,5 +1,8 @@
+1.3      - Added write_nss_db() and write_java_p12() functions to eliminate
+           duplicate code
+         - Corrected version string
 1.2      - Use md5sum values for anchors.txt to detect p11-kit changes
-         - Added get_p11_label function to get reliable label values
+         - Added get_p11_label() function to get reliable label values
          - Added get_trust_values(), get_p11_trust(), and write_anchor()
            functions to eliminate duplicate code
          - Fix certificate label in local certificates
