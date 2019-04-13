@@ -9,7 +9,7 @@
 #          Bruce Dubbs
 #          Graham Weldon
 
-VERSION="1.3"
+VERSION="1.4"
 MAKE_CA_CONF="/etc/make-ca.conf"
 
 # Get/set defaults

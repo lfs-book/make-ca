@@ -9,5 +9,5 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/bin/update-ca-certificates
+ExecStart=/usr/sbin/make-ca -g
 
