@@ -19,9 +19,12 @@ TEMPDIR=`mktemp -d`
                        "${TEMPDIR}"
 
 # Create a list of anchors that were not present or have been modified
-"${MD5SUM}" "${ANCHORDIR}"/*.pem > "${TEMPDIR}/anchors.md5sums"
-diff -au "${ANCHORLIST}" "${TEMPDIR}/anchors.md5sums" > "${TEMPDIR}/diff"
-grep "^+[a-z,0-9]" "${TEMPDIR}/diff" | cut -d " " -f 3 > "${TEMPDIR}/certlist"
+"${MD5SUM}" "${ANCHORDIR}"/*.pem \
+    2> /dev/null > "${TEMPDIR}/anchors.md5sums"
+diff -au "${ANCHORLIST}" "${TEMPDIR}/anchors.md5sums" \
+    2> /dev/null > "${TEMPDIR}/diff" 
+grep "^+[a-z,0-9]" "${TEMPDIR}/diff" | cut -d " " -f 3 \
+    2> /dev/null > "${TEMPDIR}/certlist"
 
 echo -e "\nThe following certificates have local modifications:\n"
 
