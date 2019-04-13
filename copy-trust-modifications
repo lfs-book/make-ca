@@ -9,7 +9,6 @@ else
     ANCHORLIST="/etc/pki/anchors.md5sums"
     LOCALDIR="/etc/ssl/local"
     MD5SUM="/usr/bin/md5sum"
-    CERTLIST=""
 fi
 
 # Dump to a temporary directory
