@@ -1,15 +1,16 @@
 make-ca is a utility to deliver and manage a complete PKI configuration for
-workstaitons and servers using only standard Unix utilities and OpenSSL. It
-will optionally generate keystores for OpenJDK and NSS if already installed,
-using a Mozilla cacerts.txt or like formatted file. It was originally developed
-for use with Linux From Scratch to minimize dependencies for early system
-build, but has been written to be generic enough for any Linux distribution.
+workstaitons and servers using only standard Unix utilities, OpenSSL, and
+p11-kit, using a Mozilla cacerts.txt or like file as the trust source. It can
+optionally generate keystores for OpenJDK PKCS#12 and NSS if installed. It was
+originally developed for use with Linux From Scratch to minimize dependencies
+for early system build, but has been written to be generic enough for any Linux
+distribution.
 
 The make-ca script will process the certificates included in the certdata.txt
-file for use in multiple certificate stores (if the associated applications are
-present on the system). Additionally, any local certificates stored in
-/etc/ssl/local will be imported into the certificate stores. Certificates in
-this directory should be stored as PEM encoded OpenSSL trusted certificates.
+file, and place them in the system trust anchors, for use in multiple
+certificate stores. Additionally, any local certificates stored in
+/etc/ssl/local will also be imported into the system trust anchors and
+certificate stores making it a full trust management utiltiy.
 
 As of version 1.2, a p11-kit helper, copy-trust-modifications, is included
 for use in p11-kit's trust-extract-compat script (which should be symlinked
