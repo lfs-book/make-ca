@@ -4,6 +4,7 @@
          - Remove unused variables saarg, csarg, and smarg in
            get_trust_values() function
          - Remove unused CERTLIST variable in copy-trust-modifications
+         - Fix syntax error in check_arg() function
          - Correct STDERR redirection in multiple functions
 1.2      - Use md5sum values for anchors.txt to detect p11-kit changes
          - Added get_p11_label() function to get reliable label values

@@ -227,8 +227,8 @@ function get_args(){
 }
 
 function check_arg(){
-  echo "${2}" | grep -v "^-" > /dev/null
-  if [ -z "$?" -o ! -n "$2" ]; then
+  echo "${2}" | grep "^-" > /dev/null
+  if [ "$?" == "0" -o ! -n "$2" ]; then
     echo "Error:  $1 requires a valid argument."
     exit 1
   fi
