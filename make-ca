@@ -818,32 +818,30 @@ popd
 rm -rf "${TEMPDIR}"
 
 # Build ANCHORLIST
-"${MD5SUM}" "${ANCHORDIR}"/*.pem > "${ANCHORLIST}"
+"${MD5SUM}" "${DESTDIR}${ANCHORDIR}"/*.pem > "${DESTDIR}${ANCHORLIST}"
 
-# Build alternate formats using p11-kit trust (if not using DESTDIR)
-if test "x${DESTDIR}" == "x"; then
-  mkdir -p "${BUNDLEDIR}" "${KEYSTORE}"
-  echo -n "Extracting OpenSSL certificates to ${CERTDIR}..."
-  "${TRUST}" extract --filter=certificates --format=openssl-directory \
-                     --overwrite --comment "${CERTDIR}" \
-                     && echo "Done!" || echo "Failed!!!"
-  echo -n "Extracting GNUTLS server auth certificates to ${CABUNDLE}..."
-  "${TRUST}" extract --filter=ca-anchors --format=pem-bundle \
-                     --purpose server-auth --overwrite --comment "${CABUNDLE}" \
-                     && echo "Done!" || echo "Failed!!!"
-  echo -n "Extracting GNUTLS S-Mime certificates to ${SMBUNDLE}..."
-  "${TRUST}" extract --filter=ca-anchors --format=pem-bundle \
-                     --purpose email --overwrite --comment "${SMBUNDLE}" \
-                     && echo "Done!" || echo "Failed!!!"
-  echo -n "Extracting GNUTLS code signing certificates to ${CSBUNDLE}..."
-  "${TRUST}" extract --filter=ca-anchors --format=pem-bundle \
-                     --purpose code-signing --overwrite --comment \
-                     "${CSBUNDLE}" && echo "Done!" || echo "Failed!!!"
-  echo -n "Extracting Java cacerts (JKS) to ${KEYSTORE}/cacerts..."
-  "${TRUST}" extract --filter=ca-anchors --format=java-cacerts \
-                     --purpose server-auth --overwrite \
-                     --comment "${KEYSTORE}/cacerts" \
-                     && echo "Done!" || echo "Failed!!!"
-fi
+# Build alternate formats using p11-kit trust
+mkdir -p "${DESTDIR}${BUNDLEDIR}" "${DESTDIR}${KEYSTORE}"
+echo -n "Extracting OpenSSL certificates to ${DESTDIR}${CERTDIR}..."
+"${TRUST}" extract --filter=certificates --format=openssl-directory \
+                   --overwrite --comment "${DESTDIR}${CERTDIR}" \
+                   && echo "Done!" || echo "Failed!!!"
+echo -n "Extracting GNUTLS server auth certificates to ${DESTDIR}${CABUNDLE}..."
+"${TRUST}" extract --filter=ca-anchors --format=pem-bundle \
+                   --purpose server-auth --overwrite --comment "${DESTDIR}${CABUNDLE}" \
+                   && echo "Done!" || echo "Failed!!!"
+echo -n "Extracting GNUTLS S-Mime certificates to ${DESTDIR}${SMBUNDLE}..."
+"${TRUST}" extract --filter=ca-anchors --format=pem-bundle \
+                   --purpose email --overwrite --comment "${DESTDIR}${SMBUNDLE}" \
+                   && echo "Done!" || echo "Failed!!!"
+echo -n "Extracting GNUTLS code signing certificates to ${DESTDIR}${CSBUNDLE}..."
+"${TRUST}" extract --filter=ca-anchors --format=pem-bundle \
+                   --purpose code-signing --overwrite --comment \
+                   "${DESTDIR}${CSBUNDLE}" && echo "Done!" || echo "Failed!!!"
+echo -n "Extracting Java cacerts (JKS) to ${DESTDIR}${KEYSTORE}/cacerts..."
+"${TRUST}" extract --filter=ca-anchors --format=java-cacerts \
+                   --purpose server-auth --overwrite \
+                   --comment "${DESTDIR}${KEYSTORE}/cacerts" \
+                   && echo "Done!" || echo "Failed!!!"
 
 # End /usr/sbin/make-ca
