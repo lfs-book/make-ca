@@ -30,6 +30,14 @@ from trust/trust-extract-compat.in, and append the following:
 /usr/sbin/make-ca -f -g
 ===============================================================================
 
+If you wish to distribute the results of this script as a standalone package,
+unlike in the BLFS distribution for which it was originally written, where the
+end user is ulimately responsible for the content, you, as the distributor, are
+taking ownership for the results. You are strongly encouraged to define a
+written inclusion policy, distribute all blacklisted files as a part of the
+local directory, and to provide the written policy in the distributed package.
+
+
 The manual instructions below have been left for reference.
 
 To create an OpenSSL trusted certificate from a regular PEM encoded file,
