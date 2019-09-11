@@ -1,3 +1,4 @@
+1.5      - Allow generation of all stores in alternate directory
 1.4      - Revert change to use /usr/bin/update-ca-certifiates for systemd 
            service
 1.3      - Added write_nss_db() and write_java_p12() functions to eliminate
