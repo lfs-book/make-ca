@@ -38,7 +38,7 @@ install_systemd:
 	    install -vm644 systemd/* ${DESTDIR}/lib/systemd/system; \
 	fi
 
-install_man:
+install_man: man
 	install -vdm755 $(DESTDIR)$(MANDIR)/man8
 	install -vm644 make-ca.8 $(DESTDIR)$(MANDIR)/man8
 
