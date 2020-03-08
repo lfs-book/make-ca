@@ -1,3 +1,4 @@
+1.8      -
 1.7      - Revert help2man update (requires complete perl environment)
 1.6      - Fix install target for make -j#
          - Add detailed dependency info and add note about configuration file 
