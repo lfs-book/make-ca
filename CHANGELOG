@@ -1,3 +1,4 @@
+1.7      -
 1.6      - Fix install target for make -j#
          - Add detailed dependency info and add note about configuration file 
          - Update help2man to 1.47.12
