@@ -1,5 +1,6 @@
 1.6      - Fix install target for make -j#
          - Add detailed dependency info and add note about configuration file 
+         - Update help2man to 1.47.12
 1.5      - Allow generation of all stores in alternate directory
 1.4      - Revert change to use /usr/bin/update-ca-certifiates for systemd 
            service
