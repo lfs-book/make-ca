@@ -2,7 +2,7 @@
 
 # Generate a short man page from --help and --version output.
 # Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2009,
-# 2010, 2011, 2012, 2013, 2014, 2015 Free Software Foundation, Inc.
+# 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,22 +26,43 @@ use Getopt::Long;
 use Text::ParseWords qw(shellwords);
 use Text::Tabs qw(expand);
 use POSIX qw(strftime setlocale LC_ALL);
+use Locale::gettext qw(gettext);
+use Encode qw(decode encode);
+use I18N::Langinfo qw(langinfo CODESET);
 
 my $this_program = 'help2man';
-my $this_version = '1.47.4';
+my $this_version = '1.47.12';
+my $encoding;
 
-sub _ { $_[0] }
-sub configure_locale
 {
-    my $locale = shift;
-    die "$this_program: no locale support (Locale::gettext required)\n"
-	unless $locale eq 'C';
+    my $gettext = Locale::gettext->domain($this_program);
+    sub _ { $gettext->get($_[0]) }
+
+    my ($user_locale) = grep defined && length,
+	(map $ENV{$_}, qw(LANGUAGE LC_ALL LC_MESSAGES LANG)), 'C';
+
+    my $user_encoding = langinfo CODESET;
+
+    # Set localisation of date and executable's output.
+    sub configure_locale
+    {
+	delete @ENV{qw(LANGUAGE LC_MESSAGES LANG)};
+	setlocale LC_ALL, $ENV{LC_ALL} = shift || 'C';
+	$encoding = langinfo CODESET;
+    }
+
+    sub dec { $encoding ? decode $encoding, $_[0] : $_[0] }
+    sub enc { $encoding ? encode $encoding, $_[0] : $_[0] }
+    sub enc_user { encode $user_encoding, $_[0] }
+    sub kark # die with message formatted in the invoking user's locale
+    {
+	setlocale LC_ALL, $user_locale;
+	my $fmt = $gettext->get(shift);
+	my $errmsg = enc_user sprintf $fmt, @_;
+	die $errmsg, "\n";
+    }
 }
 
-sub dec { $_[0] }
-sub enc { $_[0] }
-sub enc_user { $_[0] }
-sub kark { die +(sprintf shift, @_), "\n" }
 sub N_ { $_[0] }
 
 sub program_basename;
@@ -53,7 +74,7 @@ my $version_info = enc_user sprintf _(<<'EOT'), $this_program, $this_version;
 GNU %s %s
 
 Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2009, 2010,
-2011, 2012, 2013, 2014, 2015 Free Software Foundation, Inc.
+2011, 2012, 2013, 2014, 2015, 2016, 2017 Free Software Foundation, Inc.
 This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
@@ -122,6 +143,8 @@ my %opt_def = (
 # Parse options.
 Getopt::Long::config('bundling');
 die $help_info unless GetOptions %opt_def and @ARGV == 1;
+
+configure_locale unless $encoding;
 
 my %include = ();
 my %replace = ();
@@ -248,15 +271,15 @@ my $help_text   = get_option_value $ARGV[0], $help_option;
 $version_text ||= get_option_value $ARGV[0], $version_option;
 
 # By default the generated manual pages will include the current date.  This may
-# however be overriden by setting the environment variable $SOURCE_DATE_EPOCH
-# to an integer value of the seconds since the UNIX epoch.  This is primarily
+# however be overriden by setting the environment variable $SOURCE_DATE_EPOCH to
+# an integer value of the seconds since the UNIX epoch.  This is primarily
 # intended to support reproducible builds (wiki.debian.org/ReproducibleBuilds)
 # and will additionally ensure that the output date string is UTC.
 my $epoch_secs = time;
 if (exists $ENV{SOURCE_DATE_EPOCH} and $ENV{SOURCE_DATE_EPOCH} =~ /^(\d+)$/)
 {
     $epoch_secs = $1;
-    $ENV{TZ} = 'UTC';
+    $ENV{TZ} = 'UTC0';
 }
 
 # Translators: the following message is a strftime(3) format string, which in

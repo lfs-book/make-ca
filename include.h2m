@@ -3,10 +3,23 @@ make-ca -g
 
 [EXAMPLES]
 The make-ca script will process the certificates included in the certdata.txt
-file for use in multiple certificate stores (if the associated applications are
+file for use in multiple certificate stores (if the required prerequisites are
 present on the system). Additionally, any local certificates stored in
 /etc/ssl/local will be imported to the certificate stores. Certificates in this
 directory should be stored as PEM encoded OpenSSL trusted certificates.
+
+The make-ca script depends on OpenSSL-1.1.0, P11-Kit-0.23, and optionally,
+NSS-3.23 (for the MozTrust exetension). Additionally, Coreutils, gawk, and sed
+are used. The default locations for output files can be tailored for your
+environment via the /etc/make-ca.conf configuration file.
+
+As of version 1.2, a p11-kit helper, copy-trust-modifications, is included
+for use in p11-kit's trust-extract-compat script. Manual creation of OpenSSL
+trusted certificates is no longer needed. Instead, import the certificate
+using p11-kit's trust utility, and recreate the individual stores using the
+update-ca-certificates script. A copy of any modified anchors will be placed
+into $LOCALDIR (in the correct format) by the p11-kit helper script. The old
+method is left for reference:
 
 To create an OpenSSL trusted certificate from a regular PEM encoded file,
 provided by a CA not included in Mozilla's certificate distribution, you need
@@ -36,3 +49,4 @@ particular use, replace the -addtrust flag with the -addreject flag.
 Local trust overrides are handled entirely using the /etc/ssl/local directory.
 To override Mozilla's trust values, simply make a copy of the certificate in
 the local directory with alternate trust values.
+

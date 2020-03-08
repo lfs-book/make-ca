@@ -1,4 +1,5 @@
-1.6      - Fix install target for make -j# 
+1.6      - Fix install target for make -j#
+         - Add detailed dependncy info and add note about configuration file 
 1.5      - Allow generation of all stores in alternate directory
 1.4      - Revert change to use /usr/bin/update-ca-certifiates for systemd 
            service
