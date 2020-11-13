@@ -35,7 +35,7 @@
            from trust policy
          - Only generate the trust store (and optionally NSSDB and Java PKCS#12)
            when using DESTDIR - you now must run the installed script as part of
-           your post-installation proceedure, with P11-Kit trust available, to
+           your post-installation procedure, with P11-Kit trust available, to
            generate the alternate certificate stores - only the trust store (and
            optionally NSSDB and Java P12 stores) are distributed
          - Added "Wants=network-online.target" to update-pki.service - Thanks to
@@ -70,10 +70,10 @@
            CKA_TRUST_CLIENT_AUTH
 20170119 - Show trust bits on local certs
          - Add version output for help2man
-20161210 - Add note about --force swich when same version
+20161210 - Add note about --force switch when same version
 20161126 - Add -D/--destdir switch
 20161124 - Add -f/--force switch to bypass version check
-         - Add multiple switches to allow for alternate localtions
+         - Add multiple switches to allow for alternate locations
          - Add help text
 20161118 - Drop make-cert.pl script
          - Add support for Java and NSSDB
