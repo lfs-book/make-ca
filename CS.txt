@@ -5,7 +5,7 @@ signing (such as we use Mozilla for TLS/S-Mime). The following list of
 certificate hashes that are already installed (as they have TLS trust from
 Mozilla) that are also trusted by Microsoft for code signing. The Microsoft
 Trusted Root Certificate Program's inclusion policy is available for review at
-https://technet.microsoft.com/en-us/library/mt171474.aspx.
+https://docs.microsoft.com/en-us/previous-versions/azure/mt171474(v=azure.100).
 
 02265526,062cdee6,157753a5,244b5494,2c543cd1,2e4eed3c,3513523f,4304c5e5,
 442adcac,480720ec,48bec511,4a6481c9,4bfab552,5ad8a5d6,653b494a,6b99d060,
