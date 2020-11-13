@@ -23,7 +23,7 @@ URL="https://hg.mozilla.org/releases/mozilla-release/raw-file/default/security/n
 
 # Source must be downloaded over https
 # Valid urls for download are below
-# Defualt to NSS release brach
+# Default to NSS release branch
 
 # https://hg.mozilla.org/releases/mozilla-release/raw-file/default/security/nss/lib/ckfw/builtins/certdata.txt
 # https://hg.mozilla.org/projects/nss/raw-file/tip/lib/ckfw/builtins/certdata.txt
