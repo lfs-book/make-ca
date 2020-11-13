@@ -1,5 +1,5 @@
 make-ca is a utility to deliver and manage a complete PKI configuration for
-workstaitons and servers using only standard Unix utilities, OpenSSL, and
+workstations and servers using only standard Unix utilities, OpenSSL, and
 p11-kit, using a Mozilla cacerts.txt or like file as the trust source. It can
 optionally generate keystores for OpenJDK PKCS#12 and NSS if installed. It was
 originally developed for use with Linux From Scratch to minimize dependencies
@@ -37,7 +37,7 @@ from trust/trust-extract-compat.in, and append the following:
 
 If you wish to distribute the results of this script as a standalone package,
 unlike in the BLFS distribution for which it was originally written, where the
-end user is ulimately responsible for the content, you, as the distributor, are
+end user is ultimately responsible for the content, you, as the distributor, are
 taking ownership for the results. You are strongly encouraged to define a
 written inclusion policy, distribute all blacklisted files as a part of the
 local directory, and to provide the written policy in the distributed package.
