@@ -26,7 +26,7 @@ update-ca-certificates script. A copy of any modified anchors will be placed
 into $LOCALDIR (in the correct format) by the p11-kit helper script.
 
 For the p11-kit distro hook, remove the "not configured" and "exit 1" lines
-from trust/trust-extract-compat.in, and append the following:
+from trust/trust-extract-compat, and append the following:
 ===============================================================================
 # Copy existing modifications to local store
 /usr/libexec/make-ca/copy-trust-modifications
