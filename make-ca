@@ -536,7 +536,7 @@ function write_nss_db() {
 
   "${CERTUTIL}" -d "sql:${1}" -A \
                 -t "${satrust},${smtrust},${cstrust}" \
-                -n "${p11label}" -i "${2}"
+                -n "${p11label}" -i "${2}" > /dev/null 2>&1
   echo "Added to NSS shared DB with trust '${satrust},${smtrust},${cstrust}'."
 }
 
@@ -571,10 +571,8 @@ function write_java_p12() {
     "${KEYTOOL}" -importcert -file "${2}" -storetype PKCS12     \
                  -noprompt -alias "${p11label}" -storepass 'changeit' \
                  -keystore "${1}" $EKUVAL  \
-                 > /dev/null 2>&1 | \
-    sed -e "s@Certificate was a@A@" \
-        -e 's@keystore@Java cacerts (PKCS#12) with trust '${satrust},${smtrust},${cstrust}'.@' \
-        | sed 's@p@@'
+                 > /dev/null 2>&1
+    echo "Added to Java cacerts (PKCS#12) with trust '${satrust},${smtrust},${cstrust}'."
     unset EKU
     unset EKUVAL
   fi
@@ -590,7 +588,6 @@ mkdir -p "${TEMPDIR}"/{certs,pki/anchors,work}
 if test "${WITH_P12}" -eq "1"; then
   test ! -x "${KEYTOOL}" && \
      echo "Java keytool not found at ${KEYTOOL}. Exiting..." && exit 1
-else
   mkdir -p "${TEMPDIR}/ssl/java"
 fi
 
@@ -766,7 +763,7 @@ fi
 if test "${WITH_P12}" == "1"; then
   test -f "${DESTDIR}${KEYSTORE}/cacerts.p12" &&
           rm -f "${DESTDIR}${KEYSTORE}/cacerts.p12"
-  install -dm644 "${TEMPDIR}/ssl/java/cacerts.p12" \
+  install -vm644 "${TEMPDIR}/ssl/java/cacerts.p12" \
                  "${DESTDIR}${KEYSTORE}/cacerts.p12"
 fi
 

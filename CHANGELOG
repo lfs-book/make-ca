@@ -8,6 +8,7 @@
            and generate a trusted certificate for use in LOCALDIR
          - Add nss-{server,email}-distrust-after values in anchors
          - Use --filter=certificates for all stores
+         - Fix output of NSSDB and Java PCKS#12 stores
 1.7      - Revert help2man update (requires complete perl environment)
 1.6      - Fix install target for make -j#
          - Add detailed dependency info and add note about configuration file 
