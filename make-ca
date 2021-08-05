@@ -636,7 +636,7 @@ else
 fi
 
 cat "${CERTDATA}" >> "${WORKDIR}/certdata.txt"
-pushd "${WORKDIR}" > /dev/null
+pushd "${WORKDIR}" > /dev/null 2>&1
 
 # Get a list of starting lines for each cert
 CERTBEGINLIST=`grep -n "^# Certificate" "${WORKDIR}/certdata.txt" | \
@@ -814,9 +814,8 @@ if test "${REBUILD}" == "0"; then
 fi
 
 # Clean up the mess
-popd
-#rm -rf "${TEMPDIR}"
-echo ${TEMPDIR}
+popd > /dev/null 2>&1
+rm -rf "${TEMPDIR}"
 # Build ANCHORLIST
 "${MD5SUM}" "${DESTDIR}${ANCHORDIR}"/*.pem > "${DESTDIR}${ANCHORLIST}"
 
