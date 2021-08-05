@@ -817,7 +817,7 @@ fi
 popd > /dev/null 2>&1
 rm -rf "${TEMPDIR}"
 # Build ANCHORLIST
-"${MD5SUM}" "${DESTDIR}${ANCHORDIR}"/*.pem > "${DESTDIR}${ANCHORLIST}"
+"${MD5SUM}" "${DESTDIR}${ANCHORDIR}"/* > "${DESTDIR}${ANCHORLIST}"
 
 # Build alternate formats using p11-kit trust
 mkdir -p "${DESTDIR}${BUNDLEDIR}" "${DESTDIR}${KEYSTORE}"

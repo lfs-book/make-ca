@@ -19,12 +19,12 @@ TEMPDIR=`mktemp -d`
                        "${TEMPDIR}"
 
 # Create a list of anchors that were not present or have been modified
-"${MD5SUM}" "${ANCHORDIR}"/*.pem \
+"${MD5SUM}" "${ANCHORDIR}"/* \
     2> /dev/null > "${TEMPDIR}/anchors.md5sums"
 diff -au "${ANCHORLIST}" "${TEMPDIR}/anchors.md5sums" \
     2> /dev/null > "${TEMPDIR}/diff" 
-grep "^+[a-z,0-9]" "${TEMPDIR}/diff" | cut -d " " -f 3 \
-    2> /dev/null > "${TEMPDIR}/certlist"
+grep "^+[a-z,0-9]" "${TEMPDIR}/diff" | cut -d " " -f 3 | \
+    sed '/x-certificate-extension/d' 2> /dev/null > "${TEMPDIR}/certlist"
 
 echo -e "\nThe following certificates have local modifications:\n"
 
@@ -32,7 +32,10 @@ echo -e "\nThe following certificates have local modifications:\n"
 for certificate in `cat "${TEMPDIR}/certlist"` ; do
     LABEL=`grep -m 1 "label:" "${certificate}"`
     LABELNEW=`echo "${LABEL}" | /bin/sed -e 's@^label: @@' -e 's@"@@g' -e 's@ @_@g'`
-    cp -f "${TEMPDIR}/${LABELNEW}.pem" "${LOCALDIR}"
+    # if added this way, then just assume serverAuth only
+    # Auth can be changed in /etc/ssl/local or anchors
+    openssl x509 -in "${certificate}" -text -fingerprint \
+            -addtrust serverAuth -out "${LOCALDIR}/${LABELNEW}.pem"
     echo -e "${LABELNEW}"
     unset LABEL LABELNEW
 done
