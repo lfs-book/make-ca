@@ -413,18 +413,17 @@ function get_p11_label() {
   # $1 == individual nss certificate extracted from certdata.txt
   #       or x509 certificate with OpenSSL text values
 
-  p11label="$(grep -m1 "Issuer" ${1} | grep -o CN=.*$ | \
-              cut -d ',' -f 1 | sed 's@CN=@@')"
+  subjectline=$(grep -m1 "Subject:" ${1} | sed 's@\s*=\s*@=@g')
 
-  # Fallback to the OU value if CN does not exeist in Issuer string
+  p11label="$(echo ${subjectline} | grep -o "CN=.*$" | cut -d ',' -f 1 | sed 's@CN=@@')"
+
+  # Fallback to the last OU value if CN does not exeist in Subject string
   if [ "${p11label}" == "" ]; then
-      p11label="$(grep -m1 "Issuer" ${1} | grep -o "OU=.*$" | \
-                  cut -d ',' -f 1 | sed 's@OU=@@')"
+      p11label="$(echo ${subjectline} | grep -o "OU=.*$" | sed 's@OU=.*, OU=@OU=@g'| cut -d ',' -f 1 | sed 's@OU=@@')"
 
       # If still empty, fall back to Object value as a last resort
       if [ "${p11label}" == "" ]; then
-          p11label="$(grep -m1 "Issuer" ${1} | grep -o "O=.*$" | \
-                        cut -d ',' -f 1 | sed 's@O=@@')"
+          p11label="$(echo ${subjectline} | grep -o "O=.*$" | cut -d ',' -f 1 | sed 's@O=@@')"
       fi
   fi
 }
