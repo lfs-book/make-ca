@@ -732,11 +732,13 @@ if test -d "${LOCALDIR}"; then
   echo "Processing local certificates..."
   for cert in `find "${LOCALDIR}" -name "*.pem"`; do
     # Get some information about the certificate
+    get_p11_label ${cert}
     keyhash=$("${OPENSSL}" x509 -noout -in "${cert}" -hash)
     subject=$("${OPENSSL}" x509 -noout -in "${cert}" -subject)
-    # This will always be OpenSSL, values will be separated by spaces
-    certname=$( echo "${subject}" | grep -o "CN = .*" | sed 's@CN = @@' | cut -d "," -f 1)
-
+    if test "${p11label}" == ""; then
+      # This will always be OpenSSL, values will be separated by spaces
+      p11label=$( echo "${subject}" | grep -o "CN = .*" | sed 's@CN = @@' | cut -d "," -f 1)
+    fi
     echo "Certificate:  ${certname}"
     echo "Keyhash:      ${keyhash}"
 
@@ -773,9 +775,6 @@ if test -d "${LOCALDIR}"; then
     certkey="$(${OPENSSL} x509 -in ${cert} -noout -pubkey)"
     certcer="$(${OPENSSL} x509 -in ${cert})"
     certtxt="$(${OPENSSL} x509 -in ${cert} -noout -text)"
-
-    # Place certificate into trust anchors dir
-    get_p11_label "${cert}"
 
     # Get p11 trust and OID values
     get_p11_trust
