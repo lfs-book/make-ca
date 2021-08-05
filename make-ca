@@ -872,19 +872,19 @@ echo -n "Extracting OpenSSL certificates to ${DESTDIR}${CERTDIR}..."
                    --overwrite --comment "${DESTDIR}${CERTDIR}" \
                    && echo "Done!" || echo "Failed!!!"
 echo -n "Extracting GNUTLS server auth certificates to ${DESTDIR}${CABUNDLE}..."
-"${TRUST}" extract --filter=ca-anchors --format=pem-bundle \
+"${TRUST}" extract --filter=certificates --format=pem-bundle \
                    --purpose server-auth --overwrite --comment "${DESTDIR}${CABUNDLE}" \
                    && echo "Done!" || echo "Failed!!!"
 echo -n "Extracting GNUTLS S-Mime certificates to ${DESTDIR}${SMBUNDLE}..."
-"${TRUST}" extract --filter=ca-anchors --format=pem-bundle \
+"${TRUST}" extract --filter=certificates --format=pem-bundle \
                    --purpose email --overwrite --comment "${DESTDIR}${SMBUNDLE}" \
                    && echo "Done!" || echo "Failed!!!"
 echo -n "Extracting GNUTLS code signing certificates to ${DESTDIR}${CSBUNDLE}..."
-"${TRUST}" extract --filter=ca-anchors --format=pem-bundle \
+"${TRUST}" extract --filter=certificates --format=pem-bundle \
                    --purpose code-signing --overwrite --comment \
                    "${DESTDIR}${CSBUNDLE}" && echo "Done!" || echo "Failed!!!"
 echo -n "Extracting Java cacerts (JKS) to ${DESTDIR}${KEYSTORE}/cacerts..."
-"${TRUST}" extract --filter=ca-anchors --format=java-cacerts \
+"${TRUST}" extract --filter=certificates --format=java-cacerts \
                    --purpose server-auth --overwrite \
                    --comment "${DESTDIR}${KEYSTORE}/cacerts" \
                    && echo "Done!" || echo "Failed!!!"
