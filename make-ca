@@ -494,7 +494,7 @@ function write_nss_db() {
 
   "${CERTUTIL}" -d "sql:${1}" -A \
                 -t "${satrust},${smtrust},${cstrust}" \
-                -n "${certname}" -i "${2}"
+                -n "${p11label}" -i "${2}"
   echo "Added to NSS shared DB with trust '${satrust},${smtrust},${cstrust}'."
 }
 
@@ -503,7 +503,7 @@ function write_java_p12() {
   # $2 == x509 certificate in PEM format
 
   # Remove existing certificate
-  "${KEYTOOL}" -delete -noprompt -alias "${certname}"       \
+  "${KEYTOOL}" -delete -noprompt -alias "${p11label}"       \
                -keystore "${1}"  \
                -storepass 'changeit' > /dev/null 2>&1
   # Determine ExtendedKeyUsage
@@ -527,7 +527,7 @@ function write_java_p12() {
   if test "${EKU}" != ""; then
     EKUVAL="-ext EKU=${EKU}"
     "${KEYTOOL}" -importcert -file "${2}" -storetype PKCS12     \
-                 -noprompt -alias "${certname}" -storepass 'changeit' \
+                 -noprompt -alias "${p11label}" -storepass 'changeit' \
                  -keystore "${1}" $EKUVAL  \
                  > /dev/null 2>&1 | \
     sed -e "s@Certificate was a@A@" \
@@ -562,6 +562,7 @@ fi
 
 # Download certdata.txt if selected
 if test "${GET}" == "1"; then
+  echo -n "Checking for new version of certdata.txt..."
   HOST=$(echo "${URL}" | /usr/bin/cut -d / -f 3)
   _url=$(echo "${URL}" | sed 's@raw-file@log@')
   SARGS="-ign_eof -connect ${HOST}:443"
@@ -571,6 +572,7 @@ if test "${GET}" == "1"; then
   echo GET ${_url} | \
   ${OPENSSL} s_client ${SARGS} 2> /dev/null > "${TEMPDIR}/certdata.txt.log"
   unset _url
+  echo "done."
 
   # Error out here if we couldn't get the file
   grep -m1 "<i>" "${TEMPDIR}/certdata.txt.log" > /dev/null 2>&1
@@ -591,11 +593,13 @@ if test "${GET}" == "1"; then
   fi
 
   # Download the new file
+  echo -n "Downloading certdata.txt..."
   echo GET ${URL} | \
   ${OPENSSL} s_client ${SARGS} 2> /dev/null >> "${CERTDATA}"
   _line=$(( $(grep -n "certdata.txt" "${CERTDATA}" | cut -d ":" -f 1) - 1))
   sed -e "1,${_line}d" -i "${CERTDATA}"
   sed "1i # Revision:${REVISION}" -i "${CERTDATA}"
+  echo "done."
 fi
 
 if test "${REBUILD}" == "1"; then
@@ -647,9 +651,7 @@ done
 unset CERTBEGINLIST certbegin
 
 for tempfile in ${TEMPDIR}/certs/*.tmp; do
-  # Get a name for the cert
-  certname="$(grep "^# Certificate" "${tempfile}" | cut -d '"' -f 2)"
-
+  # Get trust values for the certifcate
   get_trust_values "${tempfile}"
 
   # Convert to a PEM formated certificate
@@ -672,7 +674,7 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
   keyhash=$("${OPENSSL}" x509 -noout -in tempfile.crt -hash)
 
   # Print information about cert
-  echo "Certificate:  ${certname}"
+  echo "Certificate:  ${p11label}"
   echo "Keyhash:      ${keyhash}"
 
   # Place certificate into trust anchors dir
@@ -692,7 +694,7 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
 
   # Clean up the directory and environment as we go
   rm -f tempfile.crt
-  unset keyhash subject count certname
+  unset keyhash subject count
   unset trustlist rejectlist satrust smtrust cstrust catrust
   unset p11trust p11oid p11value trustp11 p11label anchrorfile moz_trust
 
@@ -738,7 +740,7 @@ if test -d "${LOCALDIR}"; then
       # This will always be OpenSSL, values will be separated by spaces
       p11label=$( echo "${subject}" | grep -o "CN = .*" | sed 's@CN = @@' | cut -d "," -f 1)
     fi
-    echo "Certificate:  ${certname}"
+    echo "Certificate:  ${p11label}"
     echo "Keyhash:      ${keyhash}"
 
     # Get trust information
@@ -796,10 +798,10 @@ if test -d "${LOCALDIR}"; then
       write_java_p12 "${DESTDIR}${KEYSTORE}/cacerts.p12" tempfile.crt
     fi
 
-    unset keyhash subject count certname
+    unset keyhash subject count
     unset trustlist rejectlist satrust smtrust cstrust catrust
     unset p11trust p11oid p11value trustp11 p11label anchorfile moz_trust
-    echo ""
+    echo -e "\n"
 
   done
   unset cert
@@ -813,8 +815,8 @@ fi
 
 # Clean up the mess
 popd
-rm -rf "${TEMPDIR}"
-
+#rm -rf "${TEMPDIR}"
+echo ${TEMPDIR}
 # Build ANCHORLIST
 "${MD5SUM}" "${DESTDIR}${ANCHORDIR}"/*.pem > "${DESTDIR}${ANCHORLIST}"
 
