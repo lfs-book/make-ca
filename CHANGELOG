@@ -6,6 +6,7 @@
            copy-local-modifications
          - Assume serverAuth for certificates added by 'trust anchors --store'
            and generate a trusted certificate for use in LOCALDIR
+         - Add nss-{server,email}-distrust-after values in anchors
 1.7      - Revert help2man update (requires complete perl environment)
 1.6      - Fix install target for make -j#
          - Add detailed dependency info and add note about configuration file 
