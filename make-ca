@@ -764,7 +764,7 @@ fi
 if test "${WITH_P12}" == "1"; then
   test -f "${DESTDIR}${KEYSTORE}/cacerts.p12" &&
           rm -f "${DESTDIR}${KEYSTORE}/cacerts.p12"
-  install -vm644 "${TEMPDIR}/ssl/java/cacerts.p12" \
+  install -m644 "${TEMPDIR}/ssl/java/cacerts.p12" \
                  "${DESTDIR}${KEYSTORE}/cacerts.p12"
 fi
 
