@@ -21,11 +21,9 @@ A p11-kit helper, copy-trust-modifications, is included for use in p11-kit's
 trust-extract-compat script (which should be symlinked to the user's path as
 update-ca-certificates). Manual creation of OpenSSL Trusted certificates is no
 longer required for general use. Instead, import the certificate using
-p11-kit's 'trust anchor --store /path/to/certificate.crt' functionality,
-which will recreate the individual stores assigning serverAuth permissions to
-the added certificate. A copy of any newly added anchors will be placed
-into $LOCALDIR (in the correct format) by the p11-kit helper script, and the
-individual stores will be recreated.
+p11-kit's 'trust anchor --store /path/to/certificate.crt' functionality.
+This will recreate the individual stores assigning approriate permissions to
+the newly added anchor(s). Additionally, a copy of any newly added anchors will be placed into $LOCALDIR for future use.
 
 For the p11-kit distro hook, remove the "not configured" and "exit 1" lines
 from trust/trust-extract-compat, and append the following:
@@ -34,7 +32,7 @@ from trust/trust-extract-compat, and append the following:
 /usr/libexec/make-ca/copy-trust-modifications
 
 # Generate a new trust store
-/usr/sbin/make-ca -f -g
+/usr/sbin/make-ca -r
 ===============================================================================
 
 If you wish to distribute the results of this script as a standalone package,
@@ -47,7 +45,7 @@ local directory, and to provide the written policy in the distributed package.
 While the p11-kit trust utility can be used in most simple cases, you may
 require additional trust arguments for certian certificates. In these cases,
 you will need to manually create an OpenSSL trusted certificate from a regular
-PEM encoded file (use -inform for der or pkcs7 encoded certs).There are three
+PEM encoded file (use -inform for der or pkcs7 encoded certs). There are three
 trust types that are recognized by the make-ca.sh script, SSL/TLS, S/Mime, and
 code signing. For example, using the CAcert root, if you want it to be trusted
 for all three roles, the following commands will create an appropriate OpenSSL

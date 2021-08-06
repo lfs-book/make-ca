@@ -3,31 +3,33 @@ make-ca -g
 
 [EXAMPLES]
 The make-ca script will process the certificates included in the certdata.txt
-file for use in multiple certificate stores (if the required prerequisites are
-present on the system). Additionally, any local certificates stored in
-/etc/ssl/local will be imported to the certificate stores. Certificates in this
-directory should be stored as PEM encoded OpenSSL trusted certificates.
+file, and place them in the system trust anchors, for use in multiple
+certificate stores. Additionally, any local OpenSSL Trusted  certificates
+stored in /etc/ssl/local will also be imported into the system trust anchors
+and certificate stores making it a full trust management utiltiy.
 
-The make-ca script depends on OpenSSL-1.1.0, P11-Kit-0.23, and optionally,
-NSS-3.23 (for the MozTrust exetension). Additionally, Coreutils, gawk, and sed
-are used. The default locations for output files can be tailored for your
-environment via the /etc/make-ca.conf configuration file.
+The make-ca script depends on OpenSSL >= 1.1.0, P11-Kit >= 0.23.19, and
+optionally NSS >= 3.23 and Java >= 1.7. Additionally, Coreutils, gawk, and
+sed are used. The default locations for output files can be tailored for
+your environment via the /etc/make-ca.conf configuration file.
 
-As of version 1.2, a p11-kit helper, copy-trust-modifications, is included
-for use in p11-kit's trust-extract-compat script. Manual creation of OpenSSL
-trusted certificates is no longer needed. Instead, import the certificate
-using p11-kit's trust utility, and recreate the individual stores using the
-update-ca-certificates script. A copy of any modified anchors will be placed
-into $LOCALDIR (in the correct format) by the p11-kit helper script. The old
-method is left for reference:
+A p11-kit helper, copy-trust-modifications, is included for use in p11-kit's
+trust-extract-compat script (which should be symlinked to the user's path as
+update-ca-certificates). Manual creation of OpenSSL Trusted certificates is no
+longer required for general use. Instead, import the certificate using
+p11-kit's 'trust anchor --store /path/to/certificate.crt' functionality.
+This will recreate the individual stores assigning approriate permissions to
+the newly added anchor(s). Additionally, a copy of any newly added anchors will
+be placed into $LOCALDIR for future use.
 
-To create an OpenSSL trusted certificate from a regular PEM encoded file,
-provided by a CA not included in Mozilla's certificate distribution, you need
-to add trust arguments to the openssl command, and create a new certificate.
-There are three trust types that are recognized by the make-ca.sh script,
-SSL/TLS, S/Mime, and code signing. For example, using the CAcert root, if you
-want it to be trusted for all three roles, the following commands will create
-an appropriate OpenSSL trusted certificate:
+While the p11-kit trust utility can be used in most simple cases, you may
+require additional trust arguments for certian certificates. In these cases,
+you will need to manually create an OpenSSL trusted certificate from a regular
+PEM encoded file (use -inform for der or pkcs7 encoded certs). There are three
+trust types that are recognized by the make-ca.sh script, SSL/TLS, S/Mime, and
+code signing. For example, using the CAcert root, if you want it to be trusted
+for all three roles, the following commands will create an appropriate OpenSSL
+Trusted certificate:
 
   #\ install -vdm755 /etc/ssl/local \                                 
   #\ wget http://www.cacert.org/certs/root.crt \                      
@@ -39,12 +41,12 @@ an appropriate OpenSSL trusted certificate:
             > /etc/ssl/local/CAcert_Class_1_root.pem
 
 If one of the three trust arguments is omitted, the certificate is neither
-trusted, nor rejected for that role. Clients that use OpenSSL or NSS
-encountering this certificate will present a warning to the user. Clients using
-GnuTLS without p11-kit support are not aware of trusted certificates. To
-include this CA into the ca-bundle.crt (used for GnuTLS), it must have
-serverAuth trust. Additionally, to explicitly disallow a certificate for a
-particular use, replace the -addtrust flag with the -addreject flag.
+trusted, nor rejected for that role. Clients using GnuTLS without p11-kit
+support are not aware of trusted certificates. To include this CA into the
+ca-bundle.crt (used for GnuTLS linked applications not using the p11-module),
+it must have serverAuth trust. Additionally, to explicitly disallow a
+certificate for a particular use, replace the -addtrust flag with the
+-addreject flag.
 
 Local trust overrides are handled entirely using the /etc/ssl/local directory.
 To override Mozilla's trust values, simply make a copy of the certificate in
