@@ -4,8 +4,8 @@
          - Use last OU= value for get_p11_label() fallback
          - Omit x-certificate-extension in comparison for 
            copy-local-modifications
-         - Assume serverAuth for certificates added by 'trust anchors --store'
-           and generate a trusted certificate for use in LOCALDIR
+         - Use X509v3 Key Usage section to determine local trust for anchros
+           added using 'trust anchor --store'
          - Add nss-{server,email}-distrust-after values in anchors - requires
            p11-kit >= 0.23.19
          - Use --filter=certificates for all stores
