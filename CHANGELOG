@@ -6,7 +6,8 @@
            copy-local-modifications
          - Assume serverAuth for certificates added by 'trust anchors --store'
            and generate a trusted certificate for use in LOCALDIR
-         - Add nss-{server,email}-distrust-after values in anchors
+         - Add nss-{server,email}-distrust-after values in anchors - ruquires
+           p11-kit >= 0.23.19
          - Use --filter=certificates for all stores
          - Fix output of NSSDB and Java PCKS#12 stores
          - Correct incorrectly named get_p11_val()

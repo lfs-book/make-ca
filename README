@@ -12,16 +12,16 @@ certificate stores. Additionally, any local OpenSSL Trusted  certificates
 stored in /etc/ssl/local will also be imported into the system trust anchors
 and certificate stores making it a full trust management utiltiy.
 
-The make-ca script depends on OpenSSL-1.1.0, P11-Kit-0.23, and optionally,
-NSS-3.23 (for the MozTrust exetension). Additionally, Coreutils, gawk, and sed
-are used. The default locations for output files can be tailored for your
-environment via the /etc/make-ca.conf configuration file.
+The make-ca script depends on OpenSSL >= 1.1.0, P11-Kit >= 0.23.19, and
+optionally NSS >= 3.23 and Java >= 1.7. Additionally, Coreutils, gawk, and
+sed are used. The default locations for output files can be tailored for
+your environment via the /etc/make-ca.conf configuration file.
 
-As of version 1.2, a p11-kit helper, copy-trust-modifications, is included
-for use in p11-kit's trust-extract-compat script (which should be symlinked
-to the user's path as update-ca-certificates). Manual creation of OpenSSL
-trusted certificates is no longer needed. Instead, import the certificate
-using p11-kit's 'trust anchor --store /path/to/certificate.crt' functionality,
+A p11-kit helper, copy-trust-modifications, is included for use in p11-kit's
+trust-extract-compat script (which should be symlinked to the user's path as
+update-ca-certificates). Manual creation of OpenSSL Trusted certificates is no
+longer required for general use. Instead, import the certificate using
+p11-kit's 'trust anchor --store /path/to/certificate.crt' functionality,
 which will recreate the individual stores assigning serverAuth permissions to
 the added certificate. A copy of any newly added anchors will be placed
 into $LOCALDIR (in the correct format) by the p11-kit helper script, and the
