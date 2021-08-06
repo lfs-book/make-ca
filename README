@@ -31,7 +31,7 @@ from trust/trust-extract-compat, and append the following:
 # Copy existing modifications to local store
 /usr/libexec/make-ca/copy-trust-modifications
 
-# Generate a new trust store
+# Update trust stores
 /usr/sbin/make-ca -r
 ===============================================================================
 
