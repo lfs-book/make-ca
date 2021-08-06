@@ -717,7 +717,8 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
   echo "Keyhash:      ${keyhash}"
 
   # Place certificate into trust anchors dir
-  anchorfile="${TEMPDIR}/pki/anchors/${keyhash}.pem"
+  anchorlabel=$(echo ${p11label} | sed -e 's@ @_@g' -e 's@(@@g' -e 's@)@@g')
+  anchorfile="${TEMPDIR}/pki/anchors/${anchorlabel}.p11-kit"
   moz_trust="true"
   write_anchor
 
@@ -734,9 +735,9 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
   # Clean up the directory and environment as we go
   rm -f tempfile.crt
   unset keyhash subject count
-  unset mozsadistrust mozsmdistrust
+  unset mozsadistrust mozsmdistrust anchorlabel anchorfile moz_trust
   unset trustlist rejectlist satrust smtrust cstrust catrust
-  unset p11trust p11oid p11value trustp11 p11label anchrorfile moz_trust
+  unset p11trust p11oid p11value trustp11 p11label
 
   echo -e "\n"
 done
@@ -745,7 +746,7 @@ unset tempfile
 # Install anchors in $ANCHORDIR
 test -d "${DESTDIR}${ANCHORDIR}" && rm -rf "${DESTDIR}${ANCHORDIR}"
 install -dm755 "${DESTDIR}${ANCHORDIR}" > /dev/null 2>&1
-install -m644 "${TEMPDIR}"/pki/anchors/*.pem "${DESTDIR}${ANCHORDIR}"
+install -m644 "${TEMPDIR}"/pki/anchors/*.p11-kit "${DESTDIR}${ANCHORDIR}"
 
 # Install NSS Shared DB
 if test "${WITH_NSS}" == "1"; then
@@ -821,7 +822,8 @@ if test -d "${LOCALDIR}"; then
     get_p11_trust
 
     # Place certificate into trust anchors dir
-    anchorfile="${DESTDIR}${ANCHORDIR}/${keyhash}.pem"
+    anchorlabel=$(echo ${p11label} | sed -e 's@ @_@g' -e 's@(@@g' -e 's@)@@')
+    anchorfile="${DESTDIR}${ANCHORDIR}/${anchorlabel}.p11-kit"
     moz_trust="false"
     mozsadistrust="UNKNOWN"
     mozsmdistrust="UNKNOWN"
@@ -841,9 +843,9 @@ if test -d "${LOCALDIR}"; then
     fi
 
     unset keyhash subject count
-    unset mozsadistrust mozsmdistrust
+    unset mozsadistrust mozsmdistrust anchorlabel anchorfile moz_trust
     unset trustlist rejectlist satrust smtrust cstrust catrust
-    unset p11trust p11oid p11value trustp11 p11label anchorfile moz_trust
+    unset p11trust p11oid p11value trustp11 p11label
     echo -e "\n"
 
   done
