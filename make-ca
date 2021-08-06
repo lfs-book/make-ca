@@ -406,7 +406,7 @@ function convert_trust_arg(){
 }
     
 # Define p11-kit ext value constants (see p11-kit API documentation)
-function get-p11-val() {
+function get_p11_val() {
   case $1 in
     p11sasmcs)
       p11value="0%2a%06%03U%1d%25%01%01%ff%04 0%1e%06%08%2b%06%01%05%05%07%03%04%06%08%2b%06%01%05%05%07%03%01%06%08%2b%06%01%05%05%07%03%03"
@@ -500,7 +500,7 @@ function get_p11_trust() {
       if test "${cstrust}" == "C"; then
           trustp11="${trustp11}cs"
       fi
-      get-p11-val "${trustp11}"
+      get_p11_val "${trustp11}"
   fi
 
 }
