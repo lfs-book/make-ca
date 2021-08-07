@@ -9,6 +9,8 @@
 #          Bruce Dubbs
 #          Graham Weldon
 
+shopt -s extglob;
+
 VERSION="1.8"
 MAKE_CA_CONF="/etc/make-ca.conf"
 
@@ -217,6 +219,17 @@ function get_args(){
       -v | --version)
         echo -e "$(basename ${0}) ${VERSION}\n"
         exit 0
+      ;;
+      # Handle getopt style short args (use extglob instead of loop)
+      -+([a-z,A-Z]))
+        # split up the arguments and call recursively with trailing break
+        arg="${1}"
+        newargs=$( echo ${1} | sed 's@-@@' | \
+                                 sed 's/.\{1\}/& /g' | \
+                                 sed 's/[^ ]* */-&/g')
+        newargs="${newargs} $(echo ${@} | sed "s@${arg}@@")"
+        get_args ${newargs}
+        break;
       ;;
       *)
         showhelp
