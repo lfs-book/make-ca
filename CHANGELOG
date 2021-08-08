@@ -1,6 +1,6 @@
 1.8      - Use get_p11_label for certificate name in output when processing
            local certificates
-         - Use "Subject:" line for get_p11_label()
+         - Use "Subject:" line for get_p11_label() and normalize values
          - Use last OU= value for get_p11_label() fallback
          - Omit x-certificate-extension in comparison for 
            copy-local-modifications
