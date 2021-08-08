@@ -74,6 +74,7 @@ function get_args(){
       -D | --destdir)
         check_arg $1 $2
         DESTDIR="${2}"
+        echo ${DESTDIR} | grep -q "^\." && DESTDIR="${PWD}/${DESTDIR}"
         shift 2
       ;;
       -P | --pkidir)
@@ -759,8 +760,10 @@ done
 unset tempfile
 
 # Install anchors in $ANCHORDIR
-test -d "${DESTDIR}${ANCHORDIR}" && rm -rf "${DESTDIR}${ANCHORDIR}"
-install -dm755 "${DESTDIR}${ANCHORDIR}" > /dev/null 2>&1
+if test -d "${DESTDIR}${ANCHORDIR}"; then
+  rm -rf "${DESTDIR}${ANCHORDIR}"
+fi
+install -dm755 "${DESTDIR}${ANCHORDIR}"
 install -m644 "${TEMPDIR}"/pki/anchors/*.p11-kit "${DESTDIR}${ANCHORDIR}"
 
 # Install NSS Shared DB
@@ -869,7 +872,7 @@ fi
 
 # Install certdata.txt
 if test "${REBUILD}" == "0"; then
-  install -vdm755 "${DESTDIR}${SSLDIR}"
+  install -dm755 "${DESTDIR}${SSLDIR}"
   install -m644 "${WORKDIR}/certdata.txt" "${DESTDIR}${SSLDIR}/certdata.txt"
 fi
 
@@ -880,7 +883,7 @@ rm -rf "${TEMPDIR}"
 "${MD5SUM}" "${DESTDIR}${ANCHORDIR}"/* > "${DESTDIR}${ANCHORLIST}"
 
 # Build alternate formats using p11-kit trust
-mkdir -p "${DESTDIR}${BUNDLEDIR}" "${DESTDIR}${KEYSTORE}"
+install -dm755 "${DESTDIR}${CERTDIR}" "${DESTDIR}${BUNDLEDIR}" "${DESTDIR}${KEYSTORE}"
 echo -n "Extracting OpenSSL certificates to ${DESTDIR}${CERTDIR}..."
 "${TRUST}" extract --filter=certificates --format=openssl-directory \
                    --overwrite --comment "${DESTDIR}${CERTDIR}" \
