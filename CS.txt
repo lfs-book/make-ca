@@ -9,6 +9,7 @@
 # Mozilla to create a unified trust store.
 
 # List current as of 2021-08-07 04:30:00 UTC
+# Move this list to $SSLDIR and use -i to add code signing trust
 
 02265526
 064e0aa9

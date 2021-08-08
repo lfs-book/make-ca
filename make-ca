@@ -52,6 +52,7 @@ GET=0
 REBUILD=0
 WITH_P12=0
 WITH_NSS=0
+WITH_CS=1
 
 function get_args(){
   while test -n "${1}" ; do
@@ -141,6 +142,10 @@ function get_args(){
           echo "Error: ${1} cannot be used with the -r/--rebuild or -C/--certdata switches."
           exit 3
         fi
+      ;;
+      -i | --mscodesign)
+        WITH_CS="1"
+        shift 1
       ;;
       -j | --javacerts)
         check_arg $1 $2
@@ -316,6 +321,10 @@ function showhelp(){
   echo ""
   echo "        -u, --trust [/usr/bin/trust]"
   echo "                         The path of the p11-kit trust utility"
+  echo ""
+  echo "        -i, --mscodesign"
+  echo "                         Use Microsoft's trus values for code singing"
+  echo "                         You must copy /etc/CS.txt to \$SSLDIR"
   echo ""
   echo "        -f, --force      Force run, even if source is not newer"
   echo ""
@@ -505,6 +514,12 @@ function get_trust_values() {
                   cut -d " " -f 3`)"
   cstrust="$(convert_trust `grep '^CKA_TRUST_CODE_SIGNING' ${1} | \
                   cut -d " " -f 3`)"
+  if test "${WITH_CS}" -eq "1"; then
+    if test "${cstrust}" == ""; then
+      cstrust=$(grep -q "^${keyhash}" "${SSLDIR}/CS.txt" && echo "C")
+    fi
+  fi
+
   # Not currently included in NSS certdata.txt
   #catrust="$(convert_trust `grep '^CKA_TRUST_CLIENT_AUTH' ${1} | \
   #                cut -d " " -f 3`)"
@@ -633,6 +648,11 @@ if test "${WITH_NSS}" -eq "1"; then
   "${CERTUTIL}" -N --empty-password -d "sql:${TEMPDIR}/pki/nssdb"
 fi
 
+if test "${WITH_CS}" -eq "1"; then
+  test ! -f "${SSLDIR}/CS.txt" && \
+    echo "List of hashes not found at ${SSLDIR}/CS.txt. Exiting..." && exit 1
+fi
+
 # Download certdata.txt if selected
 if test "${GET}" == "1"; then
   echo -n "Checking for new version of certdata.txt..."
@@ -724,9 +744,6 @@ done
 unset CERTBEGINLIST certbegin
 
 for tempfile in ${TEMPDIR}/certs/*.tmp; do
-  # Get trust values for the certifcate
-  get_trust_values "${tempfile}"
-
   # Convert to a PEM formated certificate
   printf $(awk '/^CKA_VALUE/{flag=1;next}/^END/{flag=0}flag{printf $0}' \
   "${tempfile}") | "${OPENSSL}" x509 -text -inform DER -fingerprint \
@@ -736,15 +753,16 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
   certkey="$(${OPENSSL} x509 -in tempfile.crt -noout -pubkey)"
   certcer="$(${OPENSSL} x509 -in tempfile.crt)"
   certtxt="$(${OPENSSL} x509 -in tempfile.crt -noout -text)"
+  keyhash="$(${OPENSSL} x509 -noout -in tempfile.crt -hash)"
+
+  # Get trust values for the certifcate
+  get_trust_values "${tempfile}"
 
   # Get p11-kit label, oid, and values
   get_p11_label "${tempfile}"
 
   # Get p11 trust and OID values
   get_p11_trust
-
-  # Get a hash for the cert
-  keyhash=$("${OPENSSL}" x509 -noout -in tempfile.crt -hash)
 
   # Print information about cert
   echo "Certificate:  ${p11label}"
@@ -832,6 +850,11 @@ if test -d "${LOCALDIR}"; then
               grep "E-mail Protection" > /dev/null 2>&1 && echo "C")
     cstrust=$(echo "${trustlist}" | \
               grep "Code Signing" > /dev/null 2>&1 && echo "C")
+    if test "${WITH_CS}" -eq "1"; then
+      if test "${cstrust}" == ""; then
+        cstrust=$(grep -q "^${keyhash}" "${SSLDIR}/CS.txt" && echo "C")
+      fi
+    fi
     catrust=$(echo "${trustlist}" | \
               grep "Client Auth" > /dev/null 2>&1 && echo "C")
 

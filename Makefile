@@ -21,21 +21,25 @@ clean_man:
 	rm -f make-ca.8
 	chmod 0644 help2man
 
-install: all install_bin install_man install_systemd install_conf
+install: all install_bin install_man install_systemd install_conf install_cs
 
 install_bin:
 	install -vdm755 $(DESTDIR)$(SBINDIR)
-	install -vm755 make-ca $(DESTDIR)$(SBINDIR)
+	install -vm755  make-ca $(DESTDIR)$(SBINDIR)
 	install -vdm755 $(DESTDIR)$(LIBEXECDIR)
-	install -vm700 copy-trust-modifications $(DESTDIR)$(LIBEXECDIR)
+	install -vm700  copy-trust-modifications $(DESTDIR)$(LIBEXECDIR)
+
+install_cs:
+	install -vdm755 $(DESTDIR)$(ETCDIR)
+	install -vm644  CS.txt $(DESTDIR)$(ETCDIR)
 
 install_systemd:
 	if test -d /usr/lib/systemd/system; then \
 	    install -vdm755 ${DESTDIR}/usr/lib/systemd/system; \
-	    install -vm644 systemd/* $(DESTDIR)/usr/lib/systemd/system; \
+	    install -vm644  systemd/* $(DESTDIR)/usr/lib/systemd/system; \
 	elif test -d /lib/systemd/system; then \
 	    install -vdm755 ${DESTDIR}/lib/systemd/system; \
-	    install -vm644 systemd/* ${DESTDIR}/lib/systemd/system; \
+	    install -vm644  systemd/* ${DESTDIR}/lib/systemd/system; \
 	fi
 
 install_man: man

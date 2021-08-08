@@ -14,6 +14,8 @@
          - Correct incorrectly named get_p11_val()
          - Use .p11-kit extension for anchors
          - Handle getopt style short options in get_args()
+         - Use Microsoft's trust for code signing with -i | --mscodesign
+           Note: this is manually generated, will add CCADB when avaialble
 1.7      - Revert help2man update (requires complete perl environment)
 1.6      - Fix install target for make -j#
          - Add detailed dependency info and add note about configuration file 
