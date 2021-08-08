@@ -2,7 +2,7 @@
            local certificates
          - Use "Subject:" line for get_p11_label()
          - Use last OU= value for get_p11_label() fallback
-         - Fix sereral text issues in get_p11_label - Thanks to Michael Joost
+         - Fix several text issues in get_p11_label - Thanks to Michael Joost
          - Omit x-certificate-extension in comparison for 
            copy-local-modifications
          - Use X509v3 Key Usage section to determine local trust for anchors
