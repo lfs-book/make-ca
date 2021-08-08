@@ -462,17 +462,26 @@ function get_p11_label() {
   # $1 == individual nss certificate extracted from certdata.txt
   #       or x509 certificate with OpenSSL text values
 
-  subjectline=$(grep -m1 "Subject:" ${1} | sed 's@\s*=\s*@=@g')
+  # Get the subject line for any certs and do some early normalization
+  subjectline=$(grep -m1 "Subject:" ${1} | sed -e 's@\s*=\s*@=@g' \
+                     -e "s@(@ - @g" -e "s@)@ - @g" -e 's@\\@-@g' )
 
-  p11label="$(echo ${subjectline} | grep -o "CN=.*$" | cut -d ',' -f 1 | sed 's@CN=@@')"
+  # Try for CN first (and further normalize)
+  p11label="$(echo ${subjectline} | grep -o "CN=.*$" | cut -d '=' -f 2 | \
+              sed -e 's@[A-Z]*$@@g' -e 's@, $@@' -e 's@"@@g' -e 's@,@@g')"
 
   # Fallback to the last OU value if CN does not exeist in Subject string
-  if [ "${p11label}" == "" ]; then
-      p11label="$(echo ${subjectline} | grep -o "OU=.*$" | sed 's@OU=.*, OU=@OU=@g'| cut -d ',' -f 1 | sed 's@OU=@@')"
+  ## Special case for GlobalSign certs
+  if [ "${p11label}" == "" -o "${p11label}" == "GlobalSign" ]; then
+      p11label="$(echo ${subjectline} | grep -o "OU=.*$" | \
+                  sed 's@OU=.*, OU=@OU=@g'| cut -d '=' -f 2 | \
+                  sed -e 's@[A-Z]*$@@' -e 's@, $@@' -e 's@"@@g' -e 's@,@@g')"
 
       # If still empty, fall back to Object value as a last resort
       if [ "${p11label}" == "" ]; then
-          p11label="$(echo ${subjectline} | grep -o "O=.*$" | cut -d ',' -f 1 | sed 's@O=@@')"
+          p11label="$(echo ${subjectline} | grep -o "O=.*$" | \
+                      cut -d '=' -f 2 | sed -e 's@[A-Z]*$@@g' \
+                      -e 's@, $@@' -e 's@"@@g' -e 's@,@@g')"
       fi
   fi
 }
