@@ -462,30 +462,36 @@ function get_p11_label() {
   # $1 == individual nss certificate extracted from certdata.txt
   #       or x509 certificate with OpenSSL text values
 
-  # Get the subject line for any certs and do some early normalization
-  subjectline=$(grep -m1 "Subject:" ${1} | sed -e 's@\s*=\s*@=@g' \
-                     -e "s@(@ - @g" -e "s@)@ - @g" -e 's@\\@-@g' )
+  # Start with the label assigned by Mozilla
+  p11label=$(grep -m1 "^CKA_LABEL" ${1} | cut -d '"' -f 2 | sed 's@"@@g')
 
-  # Try for CN first (and further normalize)
-  p11label="$(echo ${subjectline} | grep -o "CN=.*$" | cut -d '=' -f 2 | \
-              sed -e 's@[A-Z]*$@@g' -e 's@, $@@' -e 's@"@@g' -e 's@,@@g')"
+  # If not coming from certdata.txt, get from x509 Subject line
+  if [ "${p11label}" == "" ]; then
+    # Get the subject line for any certs and do some early normalization
+    subjectline=$(grep -m1 "Subject:" ${1} | sed -e 's@\s*=\s*@=@g' \
+                       -e "s@(@ - @g" -e "s@)@ - @g" -e 's@\\@-@g' )
 
-  # Special case for NetLock Arany certs
-  echo ${p11label} | grep -q "^NetLock" && p11label="NetLock Arany - Class Gold"
+    # Try for CN Next (and further normalize) if not from certdata.txt
+    p11label="$(echo ${subjectline} | grep -o "CN=.*$" | cut -d '=' -f 2 | \
+                sed -e 's@[A-Z]*$@@g' -e 's@, $@@' -e 's@"@@g' \
+                    -e 's@,@@g' -e 's@ $@@')"
 
-  # Fallback to the last OU value if CN does not exeist in Subject string
-  ## Special case for GlobalSign certs
-  if [ "${p11label}" == "" -o "${p11label}" == "GlobalSign" ]; then
-      p11label="$(echo ${subjectline} | grep -o "OU=.*$" | \
-                  sed 's@OU=.*, OU=@OU=@g'| cut -d '=' -f 2 | \
-                  sed -e 's@[A-Z]*$@@' -e 's@, $@@' -e 's@"@@g' -e 's@,@@g')"
+    # Fallback to the last OU value if CN does not exeist in Subject string
+    ## Special case for GlobalSign certs
+    if [ "${p11label}" == "" ]; then
+        p11label="$(echo ${subjectline} | grep -o "OU=.*$" | \
+                    sed 's@OU=.*, OU=@OU=@g'| cut -d '=' -f 2 | \
+                    sed -e 's@[A-Z]*$@@' -e 's@, $@@' -e 's@"@@g' \
+                        -e 's@,@@g' -e 's@ $@@')"
 
       # If still empty, fall back to Object value as a last resort
       if [ "${p11label}" == "" ]; then
           p11label="$(echo ${subjectline} | grep -o "O=.*$" | \
                       cut -d '=' -f 2 | sed -e 's@[A-Z]*$@@g' \
-                      -e 's@, $@@' -e 's@"@@g' -e 's@,@@g')"
+                          -e 's@, $@@' -e 's@"@@g' \
+                          -e 's@,@@g' -e 's@ $@@')"
       fi
+    fi
   fi
 }
 
