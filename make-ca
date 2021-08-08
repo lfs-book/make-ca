@@ -470,6 +470,9 @@ function get_p11_label() {
   p11label="$(echo ${subjectline} | grep -o "CN=.*$" | cut -d '=' -f 2 | \
               sed -e 's@[A-Z]*$@@g' -e 's@, $@@' -e 's@"@@g' -e 's@,@@g')"
 
+  # Special case for NetLock Arany certs
+  echo ${p11label} | grep -q "^NetLock" && p11label="NetLock Arany - Class Gold"
+
   # Fallback to the last OU value if CN does not exeist in Subject string
   ## Special case for GlobalSign certs
   if [ "${p11label}" == "" -o "${p11label}" == "GlobalSign" ]; then
