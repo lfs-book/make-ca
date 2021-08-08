@@ -11,7 +11,7 @@
          - Use --filter=certificates for all stores
          - Fix output of NSSDB and Java PCKS#12 stores
          - Correct incorrectly named get_p11_val()
-         - Use p11label value and .p11-kit extension for anchor naming
+         - Use .p11-kit extension for anchors
          - Handle getopt style short options in get_args()
 1.7      - Revert help2man update (requires complete perl environment)
 1.6      - Fix install target for make -j#

@@ -742,8 +742,7 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
   echo "Keyhash:      ${keyhash}"
 
   # Place certificate into trust anchors dir
-  anchorlabel=$(echo ${p11label} | sed -e 's@ @_@g' -e 's@(@@g' -e 's@)@@g')
-  anchorfile="${TEMPDIR}/pki/anchors/${anchorlabel}.p11-kit"
+  anchorfile="${TEMPDIR}/pki/anchors/${keyhash}.p11-kit"
   moz_trust="true"
   write_anchor
 
@@ -760,7 +759,7 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
   # Clean up the directory and environment as we go
   rm -f tempfile.crt
   unset keyhash subject count
-  unset mozsadistrust mozsmdistrust anchorlabel anchorfile moz_trust
+  unset mozsadistrust mozsmdistrust anchorfile moz_trust
   unset trustlist rejectlist satrust smtrust cstrust catrust
   unset p11trust p11oid p11value trustp11 p11label
 
@@ -849,8 +848,7 @@ if test -d "${LOCALDIR}"; then
     get_p11_trust
 
     # Place certificate into trust anchors dir
-    anchorlabel=$(echo ${p11label} | sed -e 's@ @_@g' -e 's@(@@g' -e 's@)@@')
-    anchorfile="${DESTDIR}${ANCHORDIR}/${anchorlabel}.p11-kit"
+    anchorfile="${DESTDIR}${ANCHORDIR}/${keyhash}.p11-kit"
     moz_trust="false"
     mozsadistrust="UNKNOWN"
     mozsmdistrust="UNKNOWN"
@@ -870,7 +868,7 @@ if test -d "${LOCALDIR}"; then
     fi
 
     unset keyhash subject count
-    unset mozsadistrust mozsmdistrust anchorlabel anchorfile moz_trust
+    unset mozsadistrust mozsmdistrust anchorfile moz_trust
     unset trustlist rejectlist satrust smtrust cstrust catrust
     unset p11trust p11oid p11value trustp11 p11label
     echo -e "\n"
