@@ -323,7 +323,7 @@ function showhelp(){
   echo "                         The path of the p11-kit trust utility"
   echo ""
   echo "        -i, --mscodesign"
-  echo "                         Use Microsoft's trus values for code singing"
+  echo "                         Use Microsoft's trust values for code singing"
   echo "                         You must copy /etc/CS.txt to \$SSLDIR"
   echo ""
   echo "        -f, --force      Force run, even if source is not newer"
