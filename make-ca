@@ -36,7 +36,6 @@ else
     KEYSTORE="${PKIDIR}/tls/java"
     NSSDB="${PKIDIR}/nssdb"
     LOCALDIR="${SSLDIR}/local"
-    OVERRIDEDIR="${PKIDIR}/local"
     DESTDIR=""
     URL="https://hg.mozilla.org/releases/mozilla-release/raw-file/default/security/nss/lib/ckfw/builtins/certdata.txt"
 fi
