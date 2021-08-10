@@ -36,6 +36,7 @@ else
     KEYSTORE="${PKIDIR}/tls/java"
     NSSDB="${PKIDIR}/nssdb"
     LOCALDIR="${SSLDIR}/local"
+    OVERRIDEDIR="${PKIDIR}/local"
     DESTDIR=""
     URL="https://hg.mozilla.org/releases/mozilla-release/raw-file/default/security/nss/lib/ckfw/builtins/certdata.txt"
 fi
@@ -794,12 +795,24 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
 done
 unset tempfile
 
+# Backup any anchors with PKIX extensions - any object-id that is not 2.5.29.37
+mkdir -p ${TEMPDIR}/override
+for file in $( grep -r "^object-id: 2\.5\.29\.[0-9]" "${ANCHORDIR}" | \
+               grep -v "2\.5\.29\.37" | cut -d ":" -f 1); do
+  cp "${file}" "${TEMPDIR}/override/"
+done
+
 # Install anchors in $ANCHORDIR
 if test -d "${DESTDIR}${ANCHORDIR}"; then
   rm -rf "${DESTDIR}${ANCHORDIR}"
 fi
 install -dm755 "${DESTDIR}${ANCHORDIR}"
 install -m644 "${TEMPDIR}"/pki/anchors/*.p11-kit "${DESTDIR}${ANCHORDIR}"
+
+# Restore anchors with PKIX extensions
+if test -f "${TEMPDIR}"/override/*.p11-kit; then
+  cp "${TEMPDIR}"override/*.p11-kit "${DESTDIR}${ANCHORDIR}"
+fi
 
 # Install NSS Shared DB
 if test "${WITH_NSS}" == "1"; then
@@ -923,23 +936,28 @@ rm -rf "${TEMPDIR}"
 
 # Build alternate formats using p11-kit trust
 install -dm755 "${DESTDIR}${CERTDIR}" "${DESTDIR}${BUNDLEDIR}" "${DESTDIR}${KEYSTORE}"
-echo -n "Extracting OpenSSL certificates to ${DESTDIR}${CERTDIR}..."
+echo "Extracting OpenSSL certificates to:"
+echo -n "${DESTDIR}${CERTDIR}..."
 "${TRUST}" extract --filter=certificates --format=openssl-directory \
                    --overwrite --comment "${DESTDIR}${CERTDIR}" \
                    && echo "Done!" || echo "Failed!!!"
-echo -n "Extracting GNUTLS server auth certificates to ${DESTDIR}${CABUNDLE}..."
+echo "Extracting GNUTLS server auth certificates to:"
+echo -n "${DESTDIR}${CABUNDLE}..."
 "${TRUST}" extract --filter=certificates --format=pem-bundle \
                    --purpose server-auth --overwrite --comment "${DESTDIR}${CABUNDLE}" \
                    && echo "Done!" || echo "Failed!!!"
-echo -n "Extracting GNUTLS S-Mime certificates to ${DESTDIR}${SMBUNDLE}..."
+echo "Extracting GNUTLS S-Mime certificates to:"
+echo -n "${DESTDIR}${SMBUNDLE}..."
 "${TRUST}" extract --filter=certificates --format=pem-bundle \
                    --purpose email --overwrite --comment "${DESTDIR}${SMBUNDLE}" \
                    && echo "Done!" || echo "Failed!!!"
-echo -n "Extracting GNUTLS code signing certificates to ${DESTDIR}${CSBUNDLE}..."
+echo "Extracting GNUTLS code signing certificates to:"
+echo -n "${DESTDIR}${CSBUNDLE}..."
 "${TRUST}" extract --filter=certificates --format=pem-bundle \
                    --purpose code-signing --overwrite --comment \
                    "${DESTDIR}${CSBUNDLE}" && echo "Done!" || echo "Failed!!!"
-echo -n "Extracting Java cacerts (JKS) to ${DESTDIR}${KEYSTORE}/cacerts..."
+echo "Extracting Java cacerts (JKS) to:"
+echo -n "${DESTDIR}${KEYSTORE}/cacerts..."
 "${TRUST}" extract --filter=certificates --format=java-cacerts \
                    --purpose server-auth --overwrite \
                    --comment "${DESTDIR}${KEYSTORE}/cacerts" \
