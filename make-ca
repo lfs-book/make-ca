@@ -11,7 +11,7 @@
 
 shopt -s extglob;
 
-VERSION="1.8"
+VERSION="1.8.1"
 MAKE_CA_CONF="/etc/make-ca.conf"
 
 # Get/set defaults
