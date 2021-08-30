@@ -52,7 +52,7 @@ GET=0
 REBUILD=0
 WITH_P12=0
 WITH_NSS=0
-WITH_CS=1
+WITH_CS=0
 
 function get_args(){
   while test -n "${1}" ; do
