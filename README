@@ -1,3 +1,5 @@
+Future development will continue at https://github.com/lfs-book
+
 make-ca is a utility to deliver and manage a complete PKI configuration for
 workstations and servers using only standard Unix utilities, OpenSSL, and
 p11-kit, using a Mozilla cacerts.txt or like file as the trust source. It can
