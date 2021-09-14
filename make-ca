@@ -795,11 +795,14 @@ done
 unset tempfile
 
 # Backup any anchors with PKIX extensions - any object-id that is not 2.5.29.37
-mkdir -p ${TEMPDIR}/override
-for file in $( grep -r "^object-id: 2\.5\.29\.[0-9]" "${ANCHORDIR}" | \
-               grep -v "2\.5\.29\.37" | cut -d ":" -f 1); do
-  cp "${file}" "${TEMPDIR}/override/"
-done
+# only do if anchordir already exists
+if test -d "${DESTDIR}${ANCHORDIR}"; then
+  mkdir -p ${TEMPDIR}/override
+  for file in $( grep -r "^object-id: 2\.5\.29\.[0-9]" "${DESTDIR}${ANCHORDIR}" | \
+                 grep -v "2\.5\.29\.37" | cut -d ":" -f 1); do
+    cp "${file}" "${TEMPDIR}/override/"
+  done
+fi
 
 # Install anchors in $ANCHORDIR
 if test -d "${DESTDIR}${ANCHORDIR}"; then
