@@ -324,7 +324,7 @@ function showhelp(){
   echo ""
   echo "        -i, --mscodesign"
   echo "                         Use Microsoft's trust values for code singing"
-  echo "                         You must copy /etc/CS.txt to \$SSLDIR"
+  echo "                         You must copy /etc/make-ca/CS.txt to \$SSLDIR"
   echo ""
   echo "        -f, --force      Force run, even if source is not newer"
   echo ""
