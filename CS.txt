@@ -1,4 +1,4 @@
-# Mozilla no longer provides any trust information for code signing, opting only
+ Mozilla no longer provides any trust information for code signing, opting only
 # to supply VERIFY trust, so that Mozilla neither provides policy, nor removes
 # the functionality from NSS. The following list of certificate hashes (already
 # installed as they have TLS trust from Mozilla) are also trusted by Microsoft
@@ -8,40 +8,101 @@
 # See https://www.ccadb.org/ for joint efforts between Google, Microsoft, and
 # Mozilla to create a unified trust store.
 
-# List current as of 2021-08-07 04:30:00 UTC
+# List current as of Thu 16 Sep 2021 11:54:54 PM UTC.
 # Move this list to $SSLDIR and use -i to add code signing trust
 
-02265526
+fa5da96b
+9482e63a
+e35234b1
+6869459d
+31e28f42
+532c5267
+a17e7e98
+06dc52d5
+40193066
+0f6fa695
+6d41d539
+de6d66f3
+32888f65
+42c52aa6
+0e939519
+2a8f6cd3
+5fa25d3d
+7719f463
+f51bb24c
+9816715c
+40547a79
+0f5dc4f3
+5860aaa6
+08063a00
+ae1c5a5b
+c01eb047
+f0c70a8d
+0bf05006
+6fa5da56
+988a38cb
+749e9e03
+d7e8dc79
 064e0aa9
-244b5494
-3513523f
-4304c5e5
-442adcac
-48bec511
-4a6481c9
-4bfab552
-4f316efb
-5ad8a5d6
-5cd81ad7
-607986c7
-653b494a
-6b99d060
-75d1b2ed
-aee5f10d
-b1159c4c
-b7a5b843
-c28a8a30
-cbf06781
+76faf6c0
+e18bfb83
+f3377b1b
 cd58d51e
 d6325660
-d7e8dc79
-dd8e9d41
-ee64a828
-ef954a4e
-f081611a
-f30dd6ad
-f3377b1b
 f387163d
-f39fc864
+4bfab552
+09789157
 fc5a8f99
-
+f30dd6ad
+6b99d060
+aee5f10d
+ee64a828
+930ac5d2
+653b494a
+e36a6752
+e113c810
+ef954a4e
+02265526
+106f3e4d
+442adcac
+48bec511
+c47d9980
+76cb8f92
+eed8c118
+b1159c4c
+9d04f354
+3513523f
+607986c7
+dd8e9d41
+244b5494
+75d1b2ed
+7f3d5d1d
+f081611a
+cbf06781
+1636090b
+a8e3405a
+062cdee6
+5ad8a5d6
+1d3472b9
+dc4d6a89
+8160b96c
+b66938e9
+f39fc864
+4f316efb
+9b5697b0
+f249de83
+d887a5bb
+5273a94c
+57bcb2da
+706f604c
+c1ddac89
+5e98733a
+67e4ca4b
+14bc7599
+bc1f461c
+4b718d9b
+fe22bb9d
+c1223238
+9ccd262b
+1c3b872e
+a4596d83
