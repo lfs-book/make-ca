@@ -1,4 +1,6 @@
-1.9      -
+1.9      - Guard overrides on first run to avoid error message
+         - Move dist files to /etc/make-ca
+         - Add distribution script to update CS.txt from CCADB
 1.8.1    - Set defualt for code signing to off
 1.8      - Use get_p11_label for certificate name in output when processing
            local certificates
