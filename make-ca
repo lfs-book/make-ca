@@ -11,7 +11,7 @@
 
 shopt -s extglob;
 
-VERSION="1.9"
+VERSION="1.10"
 MAKE_CA_CONF="/etc/make-ca.conf"
 
 # Get/set defaults
@@ -940,27 +940,27 @@ rm -rf "${TEMPDIR}"
 install -dm755 "${DESTDIR}${CERTDIR}" "${DESTDIR}${BUNDLEDIR}" "${DESTDIR}${KEYSTORE}"
 echo "Extracting OpenSSL certificates to:"
 echo -n "${DESTDIR}${CERTDIR}..."
-"${TRUST}" extract --filter=certificates --format=openssl-directory \
+"${TRUST}" extract --filter=ca-anchors --format=openssl-directory \
                    --overwrite --comment "${DESTDIR}${CERTDIR}" \
                    && echo "Done!" || echo "Failed!!!"
 echo "Extracting GNUTLS server auth certificates to:"
 echo -n "${DESTDIR}${CABUNDLE}..."
-"${TRUST}" extract --filter=certificates --format=pem-bundle \
+"${TRUST}" extract --filter=ca-anchors --format=pem-bundle \
                    --purpose server-auth --overwrite --comment "${DESTDIR}${CABUNDLE}" \
                    && echo "Done!" || echo "Failed!!!"
 echo "Extracting GNUTLS S-Mime certificates to:"
 echo -n "${DESTDIR}${SMBUNDLE}..."
-"${TRUST}" extract --filter=certificates --format=pem-bundle \
+"${TRUST}" extract --filter=ca-anchors --format=pem-bundle \
                    --purpose email --overwrite --comment "${DESTDIR}${SMBUNDLE}" \
                    && echo "Done!" || echo "Failed!!!"
 echo "Extracting GNUTLS code signing certificates to:"
 echo -n "${DESTDIR}${CSBUNDLE}..."
-"${TRUST}" extract --filter=certificates --format=pem-bundle \
+"${TRUST}" extract --filter=ca-anchors --format=pem-bundle \
                    --purpose code-signing --overwrite --comment \
                    "${DESTDIR}${CSBUNDLE}" && echo "Done!" || echo "Failed!!!"
 echo "Extracting Java cacerts (JKS) to:"
 echo -n "${DESTDIR}${KEYSTORE}/cacerts..."
-"${TRUST}" extract --filter=certificates --format=java-cacerts \
+"${TRUST}" extract --filter=ca-anchors --format=java-cacerts \
                    --purpose server-auth --overwrite \
                    --comment "${DESTDIR}${KEYSTORE}/cacerts" \
                    && echo "Done!" || echo "Failed!!!"
