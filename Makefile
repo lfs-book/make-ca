@@ -34,12 +34,14 @@ install_cs:
 	install -vm644  CS.txt $(DESTDIR)$(ETCDIR)
 
 install_systemd:
-	if test -d /usr/lib/systemd/system; then \
-	    install -vdm755 ${DESTDIR}/usr/lib/systemd/system; \
-	    install -vm644  systemd/* $(DESTDIR)/usr/lib/systemd/system; \
-	elif test -d /lib/systemd/system; then \
-	    install -vdm755 ${DESTDIR}/lib/systemd/system; \
-	    install -vm644  systemd/* ${DESTDIR}/lib/systemd/system; \
+	if test -x /usr/sbin/systemctl -o -x /usr/bin/systemctl; then \
+	    if test -d /usr/lib/systemd/system; then \
+	        install -vdm755 ${DESTDIR}/usr/lib/systemd/system; \
+	        install -vm644  systemd/* $(DESTDIR)/usr/lib/systemd/system; \
+	    elif test -d /lib/systemd/system; then \
+	        install -vdm755 ${DESTDIR}/lib/systemd/system; \
+	        install -vm644  systemd/* ${DESTDIR}/lib/systemd/system; \
+	    fi; \
 	fi
 
 install_man: man
