@@ -1,4 +1,6 @@
 1.10     - Use --filter=ca-anchors for all stores
+         - Update CS.txt (no changes since last update)
+         - Fix installation of systemd timers on non-systemd systems
 1.9      - Guard overrides on first run to avoid error message
          - Move dist files to /etc/make-ca
          - Add distribution script to update CS.txt from CCADB
