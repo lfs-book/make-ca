@@ -8,7 +8,7 @@
 # See https://www.ccadb.org/ for joint efforts between Google, Microsoft, and
 # Mozilla to create a unified trust store.
 
-# List current as of Thu 16 Sep 2021 11:54:54 PM UTC.
+# List current as of Mon 10 Jan 2022 06:03:13 AM UTC.
 # Move this list to $SSLDIR and use -i to add code signing trust
 
 fa5da96b
