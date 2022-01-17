@@ -183,6 +183,10 @@ function get_args(){
           shift 2
         fi
       ;;
+      -x | --flatpem)
+        FLATPEM="1"
+        shift 1
+      ;;
       -p | --proxy)
         check_arg $1 $2
         PROXY="${2}"
@@ -325,6 +329,10 @@ function showhelp(){
   echo "        -i, --mscodesign"
   echo "                         Use Microsoft's trust values for code singing"
   echo "                         You must copy /etc/make-ca/CS.txt to \$SSLDIR"
+  echo ""
+  echo "        -x, --flatpem"
+  echo "                         Link PKI's CA bundle to cert.pem in the cert directory"
+  echo "                         Useful for applications that expect it to be there" 
   echo ""
   echo "        -f, --force      Force run, even if source is not newer"
   echo ""
@@ -928,6 +936,13 @@ fi
 if test "${REBUILD}" == "0"; then
   install -dm755 "${DESTDIR}${SSLDIR}"
   install -m644 "${WORKDIR}/certdata.txt" "${DESTDIR}${SSLDIR}/certdata.txt"
+fi
+
+# Link ${SSLDIR}/cert.pem to ${CABUNDLE} for applications that need it (dotnet)
+if test "${FLATPEM}" == "1"; then
+  echo "Linking ${SSLDIR}/cert.pem to ${CABUNDLE}"
+  ln -sfv ${SSLDIR}/cert.pem ${CABUNDLE}
+  chmod 777 ${SSLDIR}/cert.pem
 fi
 
 # Clean up the mess
