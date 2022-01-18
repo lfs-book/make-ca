@@ -941,7 +941,7 @@ fi
 # Link ${SSLDIR}/cert.pem to ${CABUNDLE} for applications that need it (dotnet)
 if test "${FLATPEM}" == "1"; then
   echo "Linking ${SSLDIR}/cert.pem to ${CABUNDLE}"
-  ln -sfv ${SSLDIR}/cert.pem ${CABUNDLE}
+  ln -sfv ${CABUNDLE} ${SSLDIR}/cert.pem
   chmod 777 ${SSLDIR}/cert.pem
 fi
 
