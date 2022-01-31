@@ -21,7 +21,8 @@ clean_man:
 	rm -f make-ca.8
 	chmod 0644 help2man
 
-install: all install_bin install_man install_systemd install_conf install_cs
+install: all install_bin install_man install_systemd install_conf \
+         install_cs install_mozilla_ca_root
 
 install_bin:
 	install -vdm755 $(DESTDIR)$(SBINDIR)
@@ -51,6 +52,10 @@ install_man: man
 install_conf:
 	install -vdm755 $(DESTDIR)$(ETCDIR)
 	install -vm644 make-ca.conf.dist $(DESTDIR)$(ETCDIR)
+
+install_mozilla_ca_root:
+	install -vdm755 $(DESTDIR)$(ETCDIR)
+	install -vm644 mozilla-ca-root.pem $(DESTDIR)$(ETCDIR)
 
 uninstall:
 	rm -f $(DESTDIR)$(SBINDIR)/make-ca
