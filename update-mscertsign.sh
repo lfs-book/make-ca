@@ -6,7 +6,7 @@ CSURL="https://ccadb-public.secure.force.com/microsoft/IncludedRootsPEMTxtForMSF
 rm -f mscertsign.txt CS.txt
 wget -O mscertsign.txt ${CSURL}
 
-echo " Mozilla no longer provides any trust information for code signing, opting only
+echo "# Mozilla no longer provides any trust information for code signing, opting only
 # to supply VERIFY trust, so that Mozilla neither provides policy, nor removes
 # the functionality from NSS. The following list of certificate hashes (already
 # installed as they have TLS trust from Mozilla) are also trusted by Microsoft
