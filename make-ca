@@ -11,8 +11,11 @@
 
 shopt -s extglob;
 
-VERSION="1.10"
+VERSION="1.11"
 MAKE_CA_CONF="/etc/make-ca.conf"
+
+# CA root for hg.mozilla.org
+MOZILLA_CA_ROOT="/etc/make-ca/mozilla-ca-root.pem"
 
 # Get/set defaults
 if test -f "${MAKE_CA_CONF}"; then
@@ -658,7 +661,11 @@ if test "${GET}" == "1"; then
   echo -n "Checking for new version of certdata.txt..."
   HOST=$(echo "${URL}" | /usr/bin/cut -d / -f 3)
   _url=$(echo "${URL}" | sed 's@raw-file@log@')
-  SARGS="-ign_eof -connect ${HOST}:443"
+  SARGS="-ign_eof -connect ${HOST}:443 -verifyCAfile ${MOZILLA_CA_ROOT}"
+  if test -d /etc/ssl/certs; then
+    SARGS="${SARGS} -verifyCApath ${CERTDIR}"
+  fi
+  SARGS="${SARGS} -verify_return_error"
   if test "${PROXY}x" != "x"; then
     SARGS="${SARGS} -proxy ${PROXY}"
   fi
