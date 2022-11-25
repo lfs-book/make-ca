@@ -696,9 +696,12 @@ if test "${GET}" == "1"; then
   echo -n "Downloading certdata.txt..."
   echo GET ${URL} | \
   ${OPENSSL} s_client ${SARGS} 2> /dev/null >> "${CERTDATA}"
-  _line=$(( $(grep -n "certdata.txt" "${CERTDATA}" | cut -d ":" -f 1) - 1))
+  _line=$(( $(grep -n -m 1 "^#$" "${CERTDATA}" | cut -d ":" -f 1) - 1))
   sed -e "1,${_line}d" -i "${CERTDATA}"
   sed "1i # Revision:${REVISION}" -i "${CERTDATA}"
+  mv "${CERTDATA}" "${CERTDATA}.tmp"
+  head -n -33 "${CERTDATA}.tmp" > "${CERTDATA}"
+  rm "${CERTDATA}.tmp"
   echo "done."
 fi
 
