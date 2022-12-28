@@ -1,3 +1,7 @@
+1.12     - Remove extraneos output at end of downloaded certdata.txt file
+         - Work around bug in p11-kit trust extract that allows certificates
+           with nss-{email,server}-distust after attribute to enter downstream
+           trust bundles where this attribute is not honored.
 1.11     - Ship certificate of the CA root of hg.mozilla.org and use it for
            verification
          - Update CS.txt (and update-mscertsign.sh)
