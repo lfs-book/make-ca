@@ -43,6 +43,17 @@ else
     URL="https://hg.mozilla.org/projects/nss/raw-file/tip/lib/ckfw/builtins/certdata.txt"
 fi
 
+# Do not silently break trust store if p11-kit is too old.
+# If "trust" is not in /usr/bin, then assume the user completely knows
+# what they are doing.
+if [ "${TRUST}" = "/usr/bin/trust" ]; then
+    unset PKG_CONFIG_PATH
+    if ! /usr/bin/pkg-config --atleast-version=0.23.19 p11-kit-1; then
+      echo "Error: p11-kit is not installed or too old; at least 0.23.19 is needed."
+      exit 3
+    fi
+fi
+
 # Some data in the certs have UTF-8 characters
 # It doesn't really matter which locale, change if you like
 export LANG=en_US.utf8
