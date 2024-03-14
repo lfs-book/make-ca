@@ -768,7 +768,8 @@ unset CERTBEGINLIST certbegin
 for tempfile in ${TEMPDIR}/certs/*.tmp; do
   # Convert to a PEM formated certificate
   printf $(awk '/^CKA_VALUE/{flag=1;next}/^END/{flag=0}flag{printf $0}' \
-  "${tempfile}") | "${OPENSSL}" x509 -text -inform DER -fingerprint \
+      "${tempfile}") > awkinputfile.awktmp 
+  "${OPENSSL}" x509 -in awkinputfile.awktmp -text -inform DER -fingerprint \
   > tempfile.crt
 
   # Get individual values for certificates
@@ -806,6 +807,7 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
   fi
 
   # Clean up the directory and environment as we go
+  rm -f awkinputfile.awktmp
   rm -f tempfile.crt
   unset keyhash subject count
   unset mozsadistrust mozsmdistrust anchorfile moz_trust
