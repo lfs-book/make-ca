@@ -768,7 +768,7 @@ unset CERTBEGINLIST certbegin
 for tempfile in ${TEMPDIR}/certs/*.tmp; do
   # Convert to a PEM formated certificate
   printf $(awk '/^CKA_VALUE/{flag=1;next}/^END/{flag=0}flag{printf $0}' \
-  "${tempfile}") | "${OPENSSL}" x509 -text -inform DER -fingerprint \
+  "${tempfile}") | "${OPENSSL}" x509 -in /dev/stdin -text -inform DER -fingerprint \
   > tempfile.crt
 
   # Get individual values for certificates
