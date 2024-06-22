@@ -766,10 +766,10 @@ done
 
 unset tmpcrtbeg CERTBEGINLIST certbegin
 
-for tempfile in ${TEMPDIR}/certs/*.tmp; do
+for tempfile in ${TEMPDIR}/certs/tmp.*; do
   # Convert to a PEM formated certificate
   tempcrt=$(mktemp)
-  mv "${tmpcrt}" "${tmpcrt}.crt"
+  mv "${tempcrt}" "${tempcrt}.crt"
   printf $(awk '/^CKA_VALUE/{flag=1;next}/^END/{flag=0}flag{printf $0}' \
   "${tempfile}") | "${OPENSSL}" x509 -in /dev/stdin -text -inform DER -fingerprint \
   > "${tempcrt}.crt"
