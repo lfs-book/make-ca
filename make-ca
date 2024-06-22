@@ -759,23 +759,26 @@ CERTBEGINLIST=`grep -n "^# Certificate" "${WORKDIR}/certdata.txt" | \
 
 # Dump individual certs to temp file
 for certbegin in ${CERTBEGINLIST}; do
+  tmpcrtbeg=$(mktemp -p ${TEMPDIR}/certs)
   awk "NR==$certbegin,/^CKA_TRUST_STEP_UP_APPROVED/" "${WORKDIR}/certdata.txt" \
-      > "${TEMPDIR}/certs/${certbegin}.tmp" 
+      > $tmpcrtbeg 
 done
 
-unset CERTBEGINLIST certbegin
+unset tmpcrtbeg CERTBEGINLIST certbegin
 
 for tempfile in ${TEMPDIR}/certs/*.tmp; do
   # Convert to a PEM formated certificate
+  tempcrt=$(mktemp)
+  mv "${tmpcrt}" "${tmpcrt}.crt"
   printf $(awk '/^CKA_VALUE/{flag=1;next}/^END/{flag=0}flag{printf $0}' \
   "${tempfile}") | "${OPENSSL}" x509 -in /dev/stdin -text -inform DER -fingerprint \
-  > tempfile.crt
+  > "${tempcrt}.crt"
 
   # Get individual values for certificates
-  certkey="$(${OPENSSL} x509 -in tempfile.crt -noout -pubkey)"
-  certcer="$(${OPENSSL} x509 -in tempfile.crt)"
-  certtxt="$(${OPENSSL} x509 -in tempfile.crt -noout -text)"
-  keyhash="$(${OPENSSL} x509 -noout -in tempfile.crt -hash)"
+  certkey="$(${OPENSSL} x509 -in ${tempcrt}.crt -noout -pubkey)"
+  certcer="$(${OPENSSL} x509 -in ${tempcrt}.crt)"
+  certtxt="$(${OPENSSL} x509 -in ${tempcrt}.crt -noout -text)"
+  keyhash="$(${OPENSSL} x509 -noout -in ${tempcrt}.crt -hash)"
 
   # Get trust values for the certifcate
   get_trust_values "${tempfile}"
@@ -797,16 +800,17 @@ for tempfile in ${TEMPDIR}/certs/*.tmp; do
 
   # Import all certificates with trust args to the temporary NSS DB
   if test "${WITH_NSS}" == "1"; then
-    write_nss_db ${TEMPDIR}/pki/nssdb tempfile.crt
+    write_nss_db ${TEMPDIR}/pki/nssdb ${tempcrt}.crt
   fi
 
   # Import all certificates with trust args to the java cacerts.p12 file
   if test "${WITH_P12}" == "1"; then
-    write_java_p12 "${TEMPDIR}/ssl/java/cacerts.p12" tempfile.crt
+    write_java_p12 "${TEMPDIR}/ssl/java/cacerts.p12" ${tempcrt}.crt
   fi
 
   # Clean up the directory and environment as we go
-  rm -f tempfile.crt
+  rm -f ${tempcrt}.crt
+  unset tempcrt
   unset keyhash subject count
   unset mozsadistrust mozsmdistrust anchorfile moz_trust
   unset trustlist rejectlist satrust smtrust cstrust catrust
@@ -924,18 +928,21 @@ if test -d "${LOCALDIR}"; then
     write_anchor
 
     # Generate working copy
-    "${OPENSSL}" x509 -in "${cert}" -text -fingerprint > tempfile.crt
+    tempcert=$(mktemp)
+    mv "${tempcert}" "${tempcert}.crt"
+    "${OPENSSL}" x509 -in "${cert}" -text -fingerprint > ${tempcert}.crt
 
     # Add to Shared NSS DB
     if test "${WITH_NSS}" == "1"; then
-      write_nss_db "${DESTDIR}${NSSDB}" tempfile.crt
+      write_nss_db "${DESTDIR}${NSSDB}" ${tempcert}.crt
     fi
 
     # Import certificate (with trust args) into the java cacerts.p12 file
     if test "${WITH_P12}" == "1"; then
-      write_java_p12 "${DESTDIR}${KEYSTORE}/cacerts.p12" tempfile.crt
+      write_java_p12 "${DESTDIR}${KEYSTORE}/cacerts.p12" ${tempcert}.crt
     fi
 
+    unset tempcert
     unset keyhash subject count
     unset mozsadistrust mozsmdistrust anchorfile moz_trust
     unset trustlist rejectlist satrust smtrust cstrust catrust
