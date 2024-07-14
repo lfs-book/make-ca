@@ -1,5 +1,6 @@
 1.14     - Silence a warning from OpenSSL 3.2.x
          - Stop using statically named temporary files
+         - Prevent translated date in the man page
 1.13     - Update the certificate of the CA root of hg.mozilla.org. It seems
            it has changed on September 19th, 2023.
 1.12     - Remove extraneos output at end of downloaded certdata.txt file

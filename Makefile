@@ -10,7 +10,7 @@ make_ca:
 
 man: make_ca
 	chmod 755 help2man
-	./help2man -s 8 -N ./make-ca -i include.h2m -o make-ca.8
+	LC_ALL=C ./help2man -s 8 -N ./make-ca -i include.h2m -o make-ca.8
 
 clean: clean_make_ca clean_man
 
