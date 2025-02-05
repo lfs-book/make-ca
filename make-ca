@@ -372,12 +372,6 @@ function convert_moz_distrust(){
     fi
   elif test "${val}" == "MULTILINE_OCTAL"; then
     mozsadistrust=`printf $(grep -A1 "CKA_NSS_SERVER_DISTRUST_AFTER" "${1}" | tail -n1)`
-    # FIXME - Work around P11-kit breakage
-    cdate=$(date -u +%y%m%d)
-    mozsadate=${mozsadistrust::6}
-    if test ${cdate} -gt ${mozsadate}; then
-      satrust="p"
-    fi
   else
     mozsadistrust="UNKNOWN"
   fi
@@ -393,12 +387,6 @@ function convert_moz_distrust(){
     fi
   elif test "${val}" == "MULTILINE_OCTAL"; then
     mozsmdistrust=`printf $(grep -A1 "CKA_NSS_EMAIL_DISTRUST_AFTER" "${1}" | tail -n1)`
-    # FIXME - Work around P11-kit breakage
-    cdate=$(date -u +%y%m%d)
-    mozsmdate=${mozsmdistrust::6}
-    if test ${cdate} -gt ${mozsmdate}; then
-      smtrust="p"
-    fi
   else
     mozsmdistrust="UNKNOWN"
   fi
