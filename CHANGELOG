@@ -1,3 +1,12 @@
+1.15     - Revert "work around bug in p11-kit trust extract that allows
+           certificates with nss-{email,server}-distrust after attribute to
+           enter downstream": that isn't a bug in fact.  The date in the
+           attribute should be compared with the issue date of the
+           downstream certificate provided by the web server or the email
+           sender (that make-ca cannot know), not the system date.  SSL
+           implementations like GnuTLS or OpenSSL should handle them, but
+           they seem not doing it properly.  However that's not a valid
+           reason to misinterpret the attribute.
 1.14     - Silence a warning from OpenSSL 3.2.x
          - Stop using statically named temporary files
          - Prevent translated date in the man page
