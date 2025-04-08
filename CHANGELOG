@@ -1,3 +1,11 @@
+1.16     - Change the certificate root for Mozilla to Let's Encrypt
+           and adjust the URL to use https://hg-edge.mozilla.org instead
+           of https://hg.mozilla.org. This is required because hg.mozilla.org
+           now permanently redirects to hg-edge.mozilla.org, and the security
+           certificate is now signed by Let's Encrypt. Also of note is that
+           the command used to get the log and certdata.txt had to be adjusted
+           for this change. This should work until 2035, as that is when the
+           root certificate expires. This fixes GH#34.
 1.15     - Revert "work around bug in p11-kit trust extract that allows
            certificates with nss-{email,server}-distrust after attribute to
            enter downstream": that isn't a bug in fact.  The date in the
