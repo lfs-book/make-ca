@@ -11,7 +11,7 @@
 
 shopt -s extglob;
 
-VERSION="1.15"
+VERSION="1.16"
 MAKE_CA_CONF="/etc/make-ca.conf"
 
 # CA root for hg.mozilla.org
