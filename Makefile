@@ -55,7 +55,7 @@ install_conf:
 
 install_mozilla_ca_root:
 	install -vdm755 $(DESTDIR)$(ETCDIR)
-	install -vm644 mozilla-ca-root.pem $(DESTDIR)$(ETCDIR)
+	install -vm644 ISRG_Root_X1.pem $(DESTDIR)$(ETCDIR)
 
 uninstall:
 	rm -f $(DESTDIR)$(SBINDIR)/make-ca

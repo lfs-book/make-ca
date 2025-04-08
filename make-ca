@@ -15,7 +15,7 @@ VERSION="1.15"
 MAKE_CA_CONF="/etc/make-ca.conf"
 
 # CA root for hg.mozilla.org
-MOZILLA_CA_ROOT="/etc/make-ca/mozilla-ca-root.pem"
+MOZILLA_CA_ROOT="/etc/make-ca/ISRG_Root_X1.pem"
 
 # Get/set defaults
 if test -f "${MAKE_CA_CONF}"; then
@@ -40,7 +40,7 @@ else
     NSSDB="${PKIDIR}/nssdb"
     LOCALDIR="${SSLDIR}/local"
     DESTDIR=""
-    URL="https://hg.mozilla.org/projects/nss/raw-file/tip/lib/ckfw/builtins/certdata.txt"
+    URL="https://hg-edge.mozilla.org/projects/nss/raw-file/tip/lib/ckfw/builtins/certdata.txt"
 fi
 
 # Some data in the certs have UTF-8 characters
@@ -669,7 +669,7 @@ if test "${GET}" == "1"; then
   if test "${PROXY}x" != "x"; then
     SARGS="${SARGS} -proxy ${PROXY}"
   fi
-  echo GET ${_url} | \
+  printf "GET ${_url} HTTP/1.1\nConnection: no-keep-alive\n\n" | \
   ${OPENSSL} s_client ${SARGS} 2> /dev/null > "${TEMPDIR}/certdata.txt.log"
   unset _url
   echo "done."
@@ -694,7 +694,7 @@ if test "${GET}" == "1"; then
 
   # Download the new file
   echo -n "Downloading certdata.txt..."
-  echo GET ${URL} | \
+  printf "GET ${URL} HTTP/1.1\nConnection: no-keep-alive\n\n" | \
   ${OPENSSL} s_client ${SARGS} 2> /dev/null >> "${CERTDATA}"
   _line=$(( $(grep -n -m 1 "^#$" "${CERTDATA}" | cut -d ":" -f 1) - 1))
   sed -e "1,${_line}d" -i "${CERTDATA}"
