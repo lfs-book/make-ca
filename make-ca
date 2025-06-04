@@ -8,10 +8,11 @@
 # Authors: DJ Lucas
 #          Bruce Dubbs
 #          Graham Weldon
+#          Douglas Reno
 
 shopt -s extglob;
 
-VERSION="1.16"
+VERSION="1.16.1"
 MAKE_CA_CONF="/etc/make-ca.conf"
 
 # CA root for hg.mozilla.org
