@@ -19,7 +19,7 @@ KEYSTORE="${PKIDIR}/tls/java"
 NSSDB="${PKIDIR}/nssdb"
 LOCALDIR="${SSLDIR}/local"
 DESTDIR=""
-URL="https://hg.mozilla.org/projects/nss/raw-file/tip/lib/ckfw/builtins/certdata.txt"
+URL="https://hg-edge.mozilla.org/projects/nss/raw-file/tip/lib/ckfw/builtins/certdata.txt"
 
 # Source must be downloaded over https
 # Valid urls for download are below

@@ -1,3 +1,6 @@
+1.16.1   - Change /etc/make-ca/make-ca.conf.dist to use the URL that we changed
+           the make-ca tool to in version 1.16. Thanks goes to Andrew K. from
+           AVS ISP for the report privately.
 1.16     - Change the certificate root for Mozilla to Let's Encrypt
            and adjust the URL to use https://hg-edge.mozilla.org instead
            of https://hg.mozilla.org. This is required because hg.mozilla.org
