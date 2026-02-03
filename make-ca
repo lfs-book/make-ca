@@ -748,7 +748,7 @@ CERTBEGINLIST=`grep -n "^# Certificate" "${WORKDIR}/certdata.txt" | \
 
 # Dump individual certs to temp file
 for certbegin in ${CERTBEGINLIST}; do
-  tmpcrtbeg=$(mktemp -p ${TEMPDIR}/certs -t make-ca.XXXXXXXX.tmp)
+  tmpcrtbeg=$(mktemp -p ${TEMPDIR}/certs make-ca.XXXXXXXX.tmp)
   awk "NR==$certbegin,/^CKA_TRUST_STEP_UP_APPROVED/" "${WORKDIR}/certdata.txt" \
       > $tmpcrtbeg
 done
@@ -916,7 +916,7 @@ if test -d "${LOCALDIR}"; then
     write_anchor
 
     # Generate working copy
-    tempcert=$(mktemp -p ${TEMPDIR}/certs -t make-ca.XXXXXXXX.pem)
+    tempcert=$(mktemp -p ${TEMPDIR}/certs make-ca.XXXXXXXX.pem)
     "${OPENSSL}" x509 -in "${cert}" -text -fingerprint > ${tempcert}
 
     # Add to Shared NSS DB
