@@ -189,7 +189,7 @@ function get_args(){
       ;;
       -p | --proxy)
         check_arg $1 $2
-        PROXY="${2}"
+        export https_proxy="${2}"
         shift 2
       ;;
       -r | --rebuild)
@@ -631,6 +631,36 @@ function write_java_p12() {
   fi
 }
 
+function download_hg_mozilla() {
+  # $1 == URL
+  # $2 == Output File Path
+
+  /usr/bin/python3 << EOF
+import ssl
+ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+ctx.load_verify_locations(cafile = '${MOZILLA_CA_ROOT}')
+ctx.load_verify_locations(capath = '${CERTDIR}')
+
+import urllib.request
+hdr = {'Accept-Encoding': 'gzip, identity, *;q=0'}
+req = urllib.request.Request('$1', headers = hdr)
+conn = urllib.request.urlopen(req, context = ctx)
+
+data = conn.read()
+if conn.headers.get('Content-Encoding') == 'gzip':
+    import gzip
+    data = gzip.decompress(data)
+else:
+    # I think RFC 9110 guarantees this with our Accept-Encoding.
+    # Note that 'identity' is reserved for Accept-Encoding and it SHOULD
+    # NOT be included in Content-Encoding.
+    assert(conn.headers.get('Content-Encoding') is None)
+
+of = open('$2', 'wb')
+of.write(data)
+EOF
+}
+
 # Process command line arguments
 get_args $@
 
@@ -659,31 +689,27 @@ fi
 
 # Download certdata.txt if selected
 if test "${GET}" == "1"; then
-  echo -n "Checking for new version of certdata.txt..."
-  HOST=$(echo "${URL}" | /usr/bin/cut -d / -f 3)
-  _url=$(echo "${URL}" | sed 's@raw-file@log@')
-  SARGS="-ign_eof -connect ${HOST}:443 -verifyCAfile ${MOZILLA_CA_ROOT}"
-  if test -d /etc/ssl/certs; then
-    SARGS="${SARGS} -verifyCApath ${CERTDIR}"
-  fi
-  SARGS="${SARGS} -verify_return_error"
-  if test "${PROXY}x" != "x"; then
-    SARGS="${SARGS} -proxy ${PROXY}"
-  fi
-  printf "GET ${_url} HTTP/1.1\nConnection: no-keep-alive\n\n" | \
-  ${OPENSSL} s_client ${SARGS} 2> /dev/null > "${TEMPDIR}/certdata.txt.log"
-  unset _url
-  echo "done."
+  test ! -x "/usr/bin/python3" && \
+    echo "Python 3 not found at /usr/bin/python3. Exiting..." && exit 1
 
+  echo -n "Checking for new version of certdata.txt..."
+  _url=$(echo "${URL}" | sed 's@raw-file@log@')
+  download_hg_mozilla "${_url}" "${TEMPDIR}/certdata.txt.log"
   # Error out here if we couldn't get the file
-  grep -m1 "<i>" "${TEMPDIR}/certdata.txt.log" > /dev/null 2>&1
   if test "$?" -gt 0; then
     echo "Unable to get revision from server! Exiting."
     exit 1
   fi
+  unset _url
 
   # See if we need to update before downloading the file
   REVISION=$(grep -m1 "<i>" "${TEMPDIR}/certdata.txt.log" | cut -d "<" -f 1)
+  if test -z "${REVISION}"; then
+    echo "Unable to get revision from server! Exiting."
+    exit 1
+  fi
+  echo "done."
+
   if test -e "${DESTDIR}${SSLDIR}/certdata.txt"; then
     OLDVERSION=$(grep "^# Revision:" "${DESTDIR}${SSLDIR}/certdata.txt" | \
                       cut -d ":" -f 2)
@@ -695,14 +721,12 @@ if test "${GET}" == "1"; then
 
   # Download the new file
   echo -n "Downloading certdata.txt..."
-  printf "GET ${URL} HTTP/1.1\nConnection: no-keep-alive\n\n" | \
-  ${OPENSSL} s_client ${SARGS} 2> /dev/null >> "${CERTDATA}"
-  _line=$(( $(grep -n -m 1 "^#$" "${CERTDATA}" | cut -d ":" -f 1) - 1))
-  sed -e "1,${_line}d" -i "${CERTDATA}"
+  download_hg_mozilla "${URL}" "${CERTDATA}"
+  if test "$?" -gt 0; then
+    echo "Unable to download certdata.txt from server! Exiting."
+    exit 1
+  fi
   sed "1i # Revision:${REVISION}" -i "${CERTDATA}"
-  mv "${CERTDATA}" "${CERTDATA}.tmp"
-  head -n -33 "${CERTDATA}.tmp" > "${CERTDATA}"
-  rm "${CERTDATA}.tmp"
   echo "done."
 fi
 
