@@ -293,7 +293,7 @@ function showhelp(){
   echo "                         The output directory for the OpenSSL trusted"
   echo "                         CA certificates"
   echo ""
-  echo "        -j, --javacerts [\$PKIDIR/java/cacerts]"
+  echo "        -j, --javacerts [\$PKIDIR/java]"
   echo "                         The output directory for the Java cacerts"
   echo "                         file(s)"
   echo ""
