@@ -124,6 +124,9 @@ function get_args(){
       -b | --bundledir)
         check_arg $1 $2
         BUNDLEDIR="${2}"
+        CABUNDLE="${BUNDLEDIR}/ca-bundle.crt"
+        SMBUNDLE="${BUNDLEDIR}/email-ca-bundle.crt"
+        CSBUNDLE="${BUNDLEDIR}/objsign-ca-bundle.crt"
         shift 2
       ;;
       -d | --cadir)
